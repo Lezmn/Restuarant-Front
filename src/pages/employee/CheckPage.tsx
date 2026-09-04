@@ -1,21 +1,27 @@
 import { ErrorNote } from '@/components/ui/ErrorNote'
 import { Modal } from '@/components/ui/Modal'
 import { useOrders } from '@/features/orders/hooks'
+import { orderTotal } from '@/features/orders/order-total'
 import { useCreatePayment } from '@/features/payments/hooks'
 import { useServiceRequests } from '@/features/service-requests/hooks'
-import { formatBaht } from '@/lib/format'
 import { useSessions } from '@/features/table-sessions/hooks'
-import { orderTotal } from '@/lib/mock/db'
+import { IS_DEMO_PROMPTPAY, PROMPTPAY_ID } from '@/lib/config'
+import { formatBaht } from '@/lib/format'
+import { LIVE_POLL_MS } from '@/lib/live'
+import { buildPromptPayPayload } from '@/lib/promptpay'
 import {
+  OrderStatus,
   PaymentMethod,
   ServiceRequestStatus,
   ServiceRequestType,
   TableSessionStatus,
 } from '@/types/enums'
-import type { Id } from '@/types/models'
-import { useState } from 'react'
+import type { Id, Payment } from '@/types/models'
+import { ReceiptDialog } from './ReceiptDialog'
+import { QRCodeSVG } from 'qrcode.react'
+import { useMemo, useState } from 'react'
 
-const POLL_MS = 10_000
+const POLL_MS = LIVE_POLL_MS
 
 const methodLabel: Record<string, string> = {
   [PaymentMethod.CASH]: 'เงินสด',
@@ -51,21 +57,21 @@ interface PayTarget {
 }
 
 export function CheckPage() {
-  const { data: orders, isPending } = useOrders({ refetchInterval: POLL_MS })
   const { data: requests } = useServiceRequests({ refetchInterval: POLL_MS })
-  const { data: sessions } = useSessions()
+  const { data: sessions, isPending } = useSessions({
+    refetchInterval: POLL_MS,
+  })
+  const { data: orders } = useOrders({ refetchInterval: POLL_MS })
   const createPayment = useCreatePayment()
   const [target, setTarget] = useState<PayTarget | null>(null)
+  /** ใบเสร็จที่เพิ่งออก — เปิดให้พิมพ์ทันทีหลังรับเงิน */
+  const [receipt, setReceipt] = useState<Payment | null>(null)
 
   const openSessions = (sessions ?? []).filter(
     (s) => s.status === TableSessionStatus.OPEN,
   )
 
   const rows = openSessions.map((session) => {
-    const total = (orders ?? [])
-      .filter((o) => o.tableSessionId === session.id)
-      .reduce((sum, o) => sum + orderTotal(o), 0)
-
     const checkout = requests?.find(
       (r) =>
         r.tableSessionId === session.id &&
@@ -73,7 +79,22 @@ export function CheckPage() {
         r.status === ServiceRequestStatus.PENDING,
     )
 
-    return { session, total, checkout }
+    /**
+     * ยอดที่ต้องจ่ายจริง = เฉพาะออเดอร์ที่ยังไม่ได้จ่ายและไม่ได้ยกเลิก
+     * (field total ของ session รวมออเดอร์ที่จ่ายไปแล้วด้วย ทำให้ยอดบนจอ
+     *  ไม่ตรงกับยอดที่ backend เก็บจริงตอนแยกบิล)
+     */
+    const unpaid = (orders ?? []).filter(
+      (o) =>
+        o.tableSessionId === session.id &&
+        o.status !== OrderStatus.PAID &&
+        o.status !== OrderStatus.CANCELLED,
+    )
+    const outstanding = unpaid.reduce((sum, o) => sum + orderTotal(o), 0)
+    // backend ไม่ยอมให้จ่ายถ้ายังมีออเดอร์ที่ไม่ได้เสิร์ฟ — บอกไว้ก่อนกด จะได้ไม่เจอ error
+    const notServed = unpaid.filter((o) => o.status !== OrderStatus.SERVED)
+
+    return { session, outstanding, unpaid, notServed, checkout }
   })
 
   return (
@@ -108,82 +129,112 @@ export function CheckPage() {
               </tr>
             )}
 
-            {rows.map(({ session, total, checkout }) => (
-              <tr key={session.id} className="transition hover:bg-brand-50/60">
-                <td className="px-4 py-3 font-bold text-black">
-                  {session.tableName}
-                </td>
-                <td className="px-4 py-3 font-bold text-black">
-                  {formatBaht(total)}
-                </td>
-                <td className="px-4 py-3">
-                  {checkout?.paymentMethod ? (
-                    <span
-                      className={`font-semibold ${methodColor[checkout.paymentMethod]}`}
-                    >
-                      {methodLabel[checkout.paymentMethod]}
-                    </span>
-                  ) : (
-                    <span className="text-gray-800">รอดำเนินการ</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  {checkout ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setTarget({
-                          sessionId: session.id,
-                          tableName: session.tableName,
-                          method: checkout.paymentMethod ?? PaymentMethod.CASH,
-                          amountDue: total,
-                        })
-                      }
-                      title="บันทึกการชำระเงิน"
-                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded font-semibold underline-offset-4 transition hover:underline focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:outline-none ${
-                        methodColor[checkout.paymentMethod ?? PaymentMethod.CASH]
-                      } ${methodHover[checkout.paymentMethod ?? PaymentMethod.CASH]}`}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        aria-hidden
-                        className="h-4 w-4"
-                      >
-                        <path
-                          d="M12 20h7M4 20h3l10-10-3-3L4 17z"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      รอเช็คบิล
-                    </button>
-                  ) : (
-                    <span className="text-gray-800">รอดำเนินการ</span>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {rows.map(
+              ({ session, outstanding, unpaid, notServed, checkout }) => {
+                // ถ้าลูกค้ายังไม่ได้กดเช็คบิล พนักงานก็เปิดบิลเองได้ ตั้งต้นเป็นเงินสด
+                const method = checkout?.paymentMethod ?? PaymentMethod.CASH
+                const blocked = unpaid.length === 0 || notServed.length > 0
+
+                return (
+                  <tr
+                    key={session.id}
+                    className="transition hover:bg-brand-50/60"
+                  >
+                    <td className="px-4 py-3 font-bold text-black">
+                      {session.tableName}
+                    </td>
+                    <td className="px-4 py-3 font-bold text-black">
+                      {formatBaht(outstanding)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {checkout?.paymentMethod ? (
+                        <span
+                          className={`font-semibold ${methodColor[checkout.paymentMethod]}`}
+                        >
+                          {methodLabel[checkout.paymentMethod]}
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">ลูกค้ายังไม่ได้เลือก</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {blocked ? (
+                        <span
+                          className="text-sm text-gray-500"
+                          title={
+                            unpaid.length === 0
+                              ? 'ออเดอร์ในโต๊ะนี้จ่ายครบแล้ว'
+                              : 'ต้องกดเสิร์ฟให้ครบทุกออเดอร์ก่อนจึงจะเก็บเงินได้'
+                          }
+                        >
+                          {unpaid.length === 0
+                            ? 'จ่ายครบแล้ว'
+                            : `รออีก ${notServed.length} ออเดอร์`}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTarget({
+                              sessionId: session.id,
+                              tableName: session.tableName,
+                              method,
+                              amountDue: outstanding,
+                            })
+                          }
+                          title="บันทึกการชำระเงิน"
+                          className={`inline-flex cursor-pointer items-center gap-1.5 rounded font-semibold underline-offset-4 transition hover:underline focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:outline-none ${
+                            methodColor[method]
+                          } ${methodHover[method]}`}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            aria-hidden
+                            className="h-4 w-4"
+                          >
+                            <path
+                              d="M12 20h7M4 20h3l10-10-3-3L4 17z"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          {checkout ? 'รอเช็คบิล' : 'เก็บเงิน'}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              },
+            )}
           </tbody>
         </table>
       </div>
+
+      {receipt && (
+        <ReceiptDialog payment={receipt} onClose={() => setReceipt(null)} />
+      )}
 
       {target && (
         <PaymentDialog
           target={target}
           isSaving={createPayment.isPending}
           onCancel={() => setTarget(null)}
-          onSubmit={(amount, note) =>
+          onSubmit={(method) =>
             createPayment.mutate(
               {
                 tableSessionId: target.sessionId,
-                method: target.method,
-                amount,
-                note,
+                method,
+                tableName: target.tableName,
               },
-              { onSuccess: () => setTarget(null) },
+              {
+                onSuccess: (payment) => {
+                  setTarget(null)
+                  setReceipt(payment)
+                },
+              },
             )
           }
         />
@@ -191,6 +242,8 @@ export function CheckPage() {
     </div>
   )
 }
+
+const payMethods = [PaymentMethod.CASH, PaymentMethod.PROMPTPAY] as const
 
 function PaymentDialog({
   target,
@@ -201,75 +254,107 @@ function PaymentDialog({
   target: PayTarget
   isSaving: boolean
   onCancel: () => void
-  onSubmit: (amount: number, note: string) => void
+  onSubmit: (method: PaymentMethod) => void
 }) {
-  // เติมยอดที่ต้องจ่ายไว้ให้ก่อน พนักงานแก้ได้ถ้าลูกค้าจ่ายไม่เท่ากัน
-  const [amount, setAmount] = useState(String(target.amountDue))
-  const [note, setNote] = useState('')
+  // ตั้งต้นตามที่ลูกค้าเลือกมา แต่หน้าเคาน์เตอร์เปลี่ยนได้ (ลูกค้าเปลี่ยนใจตอนจ่ายบ่อย)
+  const [method, setMethod] = useState<PaymentMethod>(target.method)
+
+  const isPromptPay = method === PaymentMethod.PROMPTPAY
+
+  // QR ผูกยอดเงินไว้ด้วย ลูกค้าจึงไม่ต้องกรอกยอดเอง
+  const qrPayload = useMemo(
+    () =>
+      isPromptPay ? buildPromptPayPayload(PROMPTPAY_ID, target.amountDue) : '',
+    [isPromptPay, target.amountDue],
+  )
 
   return (
-    <Modal title={dialogTitle[target.method]} onClose={onCancel}>
+    <Modal title={dialogTitle[method]} onClose={onCancel}>
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          onSubmit(Number(amount), note)
+          onSubmit(method)
         }}
       >
-        <p className="mb-3 text-sm text-gray-500">
-          โต๊ะ {target.tableName} · ยอดที่ต้องจ่าย{' '}
-          <span className="font-bold text-black">
+        <p className="mb-3 text-sm text-gray-500">โต๊ะ {target.tableName}</p>
+
+        <div className="grid grid-cols-2 gap-3">
+          {payMethods.map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMethod(m)}
+              className={`rounded-lg border-2 py-2.5 text-sm font-bold transition ${
+                method === m
+                  ? `border-current ${methodColor[m]} bg-brand-50`
+                  : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              {methodLabel[m]}
+            </button>
+          ))}
+        </div>
+
+        {isPromptPay && (
+          <div className="mt-4 flex flex-col items-center rounded-xl border-2 border-promptpay/30 bg-promptpay/5 p-4">
+            <p className="mb-2 text-sm font-bold text-promptpay">
+              ให้ลูกค้าสแกนเพื่อจ่าย
+            </p>
+            <div className="rounded-lg bg-white p-3">
+              <QRCodeSVG value={qrPayload} size={180} />
+            </div>
+
+            {IS_DEMO_PROMPTPAY && (
+              <p className="mt-2 text-center text-xs text-danger">
+                โหมดเดโม — ยังไม่ได้ตั้ง VITE_PROMPTPAY_ID
+                สแกนแล้วจะไม่พบบัญชีปลายทาง
+              </p>
+            )}
+
+            <p className="mt-2 text-center text-xs text-gray-500">
+              ระบบยังตรวจสอบเงินเข้าอัตโนมัติไม่ได้ — ให้ตรวจสลิปก่อนกดบันทึก
+            </p>
+          </div>
+        )}
+
+        {/* ยอดคิดจาก backend ทั้งหมด แก้ตรงนี้ไม่ได้ เพื่อไม่ให้ยอดในใบเสร็จเพี้ยน */}
+        <div className="mt-4 flex items-center justify-between rounded-lg bg-brand-50 px-4 py-3">
+          <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden
+              className="h-4 w-4 text-brand-400"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path
+                d="M9.5 9.5A2.5 2.5 0 0 1 12 8c1.4 0 2.5.9 2.5 2s-1.1 1.8-2.5 2-2.5.9-2.5 2 1.1 2 2.5 2a2.5 2.5 0 0 0 2.5-1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            ยอดที่ต้องเก็บ
+          </span>
+          <span className="text-xl font-bold text-amount">
             {formatBaht(target.amountDue)}
           </span>
-        </p>
-
-        <label className="block">
-          <span className="flex items-center gap-1.5 text-sm text-gray-700">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden className="h-4 w-4 text-brand-400">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M9.5 9.5A2.5 2.5 0 0 1 12 8c1.4 0 2.5.9 2.5 2s-1.1 1.8-2.5 2-2.5.9-2.5 2 1.1 2 2.5 2a2.5 2.5 0 0 0 2.5-1.5" strokeLinecap="round" />
-            </svg>
-            ราคาที่จ่าย
-          </span>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 outline-none focus:border-brand-300 focus:bg-white"
-          />
-        </label>
-
-        <label className="mt-4 block">
-          <span className="flex items-center gap-1.5 text-sm text-gray-700">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden className="h-4 w-4 text-brand-400">
-              <rect x="3" y="5" width="18" height="14" rx="2" />
-              <path d="M7 9h10M7 13h6" strokeLinecap="round" />
-            </svg>
-            รายละเอียด
-          </span>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={3}
-            className="mt-1 w-full resize-none rounded border border-gray-300 bg-gray-100 px-3 py-2 outline-none focus:border-brand-300 focus:bg-white"
-          />
-        </label>
+        </div>
 
         <div className="mt-5 grid grid-cols-2 gap-4">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded bg-danger py-2.5 font-bold text-white"
+            className="rounded bg-danger py-2.5 font-bold text-white transition hover:brightness-95"
           >
             ยกเลิก
           </button>
           <button
             type="submit"
             disabled={isSaving}
-            className="rounded bg-plus py-2.5 font-bold text-white disabled:opacity-60"
+            className="rounded bg-plus py-2.5 font-bold text-white transition hover:brightness-95 disabled:opacity-60"
           >
-            {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+            {isSaving ? 'กำลังบันทึก...' : 'รับเงินแล้ว'}
           </button>
         </div>
       </form>

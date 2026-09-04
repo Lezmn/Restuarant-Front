@@ -1,6 +1,6 @@
 import { useSession } from '@/features/public/hooks'
 import { cartCount, useCart } from '@/features/public/cart-store'
-import { RESTAURANT_NAME } from '@/lib/mock/db'
+import { RESTAURANT_NAME } from '@/lib/config'
 import { useEffect, type ReactNode } from 'react'
 import { NavLink, Outlet, useParams } from 'react-router-dom'
 

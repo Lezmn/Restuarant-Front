@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/Badge'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useOrders } from '@/features/orders/hooks'
 import { formatBaht, formatTime } from '@/lib/format'
-import { orderTotal } from '@/lib/mock/db'
+import { itemTotal, orderTotal } from '@/features/orders/order-total'
 import { statusLabel, statusTone } from '@/features/orders/order-status'
 
 export function OrdersPage() {
@@ -50,7 +50,7 @@ export function OrdersPage() {
                     )}
                   </span>
                   <span className="shrink-0 text-gray-500">
-                    {formatBaht(item.unitPrice * item.quantity)}
+                    {formatBaht(itemTotal(item))}
                   </span>
                 </li>
               ))}

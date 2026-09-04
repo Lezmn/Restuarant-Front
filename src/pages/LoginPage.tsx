@@ -28,7 +28,7 @@ export function LoginPage({
   const navigate = useNavigate()
   const login = useLogin()
 
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [denied, setDenied] = useState(false)
 
@@ -43,7 +43,7 @@ export function LoginPage({
           e.preventDefault()
           setDenied(false)
           login.mutate(
-            { username, password },
+            { email, password },
             {
               onSuccess: (data) => {
                 if (allowedRoles && !allowedRoles.includes(data.user.role)) {
@@ -70,10 +70,11 @@ export function LoginPage({
         </div>
 
         <label className="block text-sm font-semibold text-gray-700">
-          ชื่อผู้ใช้
+          อีเมล
           <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             autoComplete="username"
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-300"
           />
@@ -111,7 +112,7 @@ export function LoginPage({
         </button>
 
         <p className="mt-4 rounded-lg bg-brand-50 p-3 text-xs text-gray-600">
-          ยังไม่ได้ต่อ backend — ใช้บัญชีจำลอง รหัสผ่าน <b>1234</b>
+          บัญชีตัวอย่างจาก seed — รหัสผ่าน <b>ChangeMe123!</b>
           <br />
           {hint}
         </p>

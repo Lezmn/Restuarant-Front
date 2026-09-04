@@ -1,6 +1,6 @@
 import { useCallStaff, useSession, useSessionOrders } from '@/features/public/hooks'
 import { formatBaht } from '@/lib/format'
-import { orderTotal } from '@/lib/mock/db'
+import { itemTotal, orderTotal } from '@/features/orders/order-total'
 import { OrderStatus } from '@/types/enums'
 import type { Order } from '@/types/models'
 import { Link, useParams } from 'react-router-dom'
@@ -138,7 +138,7 @@ export function CustomerStatusPage() {
                 className="rounded-2xl border-2 border-brand-75 bg-white p-4"
               >
                 <p className="text-sm font-semibold text-gray-900">
-                  ออเดอร์ #{order.orderNumber}
+                  ออเดอร์ #{order.orderRef}
                 </p>
                 <ul className="mt-2 space-y-1">
                   {order.items.map((item) => (
@@ -146,11 +146,22 @@ export function CustomerStatusPage() {
                       key={item.id}
                       className="flex justify-between gap-3 text-sm"
                     >
-                      <span className="text-gray-700">
+                      <span className="min-w-0 text-gray-700">
                         {item.quantity}× {item.menuItemName}
+                        {item.optionNames.length > 0 && (
+                          <span className="text-gray-400">
+                            {' '}
+                            ({item.optionNames.join(', ')})
+                          </span>
+                        )}
+                        {item.note && (
+                          <span className="block text-xs text-brand-400">
+                            {item.note}
+                          </span>
+                        )}
                       </span>
                       <span className="shrink-0 text-gray-500">
-                        {formatBaht(item.unitPrice * item.quantity)}
+                        {formatBaht(itemTotal(item))}
                       </span>
                     </li>
                   ))}

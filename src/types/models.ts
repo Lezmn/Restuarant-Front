@@ -13,7 +13,7 @@ export type Id = string
 
 export interface User {
   id: Id
-  username: string
+  email: string
   name: string
   role: Role
 }
@@ -69,6 +69,8 @@ export interface TableSession {
   status: TableSessionStatus
   openedAt: string
   closedAt: string | null
+  /** ยอดที่ต้องจ่ายของโต๊ะนี้ — backend คำนวณมาให้ ไม่ได้บวกเองฝั่ง frontend */
+  total: number
 }
 
 export interface OrderItem {
@@ -80,16 +82,40 @@ export interface OrderItem {
   unitPrice: number
   note: string | null
   optionNames: string[]
+  /** ราคาตัวเลือกที่บวกเพิ่มต่อ 1 จาน (backend คิด (unitPrice + optionsTotal) * quantity) */
+  optionsTotal: number
 }
 
 export interface Order {
   id: Id
-  orderNumber: number
+  /** backend ไม่มีเลขที่ออเดอร์ — ใช้ 6 ตัวแรกของ uuid แสดงแทนให้พนักงานอ้างอิงกันได้ */
+  orderRef: string
   tableSessionId: Id
   tableName: string
   status: OrderStatus
   createdAt: string
   items: OrderItem[]
+}
+
+export interface ReceiptItem {
+  id: Id
+  name: string
+  quantity: number
+  unitPrice: number
+  optionTotal: number
+  lineTotal: number
+  note: string | null
+}
+
+export interface Receipt {
+  id: Id
+  number: string
+  subtotal: number
+  discount: number
+  total: number
+  issuedAt: string
+  tableName: string
+  items: ReceiptItem[]
 }
 
 export interface Payment {
@@ -98,6 +124,7 @@ export interface Payment {
   method: PaymentMethod
   amount: number
   paidAt: string
+  receipt: Receipt | null
 }
 
 export interface ServiceRequest {

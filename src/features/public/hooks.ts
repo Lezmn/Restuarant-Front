@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   callStaff,
-  getSessionOrders,
+  getPublicCategories,
+  getPublicMenu,
   getSessionByToken,
+  getSessionOrders,
   requestCheckout,
   submitOrder,
 } from './api'
@@ -14,7 +16,28 @@ export const ORDER_POLL_MS = 10_000
 export const publicKeys = {
   session: (token: string) => ['public', 'session', token] as const,
   orders: (token: string) => ['public', 'orders', token] as const,
+  menu: ['public', 'menu'] as const,
+  categories: ['public', 'categories'] as const,
 }
+
+/** ลูกค้าไม่ได้ login จึงต้องใช้ /public/menu ไม่ใช่ /menu ที่มี JwtAuthGuard */
+export const usePublicMenu = () =>
+  useQuery({ queryKey: publicKeys.menu, queryFn: getPublicMenu })
+
+export const usePublicCategories = () =>
+  useQuery({ queryKey: publicKeys.categories, queryFn: getPublicCategories })
+
+export const usePublicMenuItem = (id: string | undefined) =>
+  useQuery({
+    queryKey: [...publicKeys.menu, id] as const,
+    queryFn: async () => {
+      const items = await getPublicMenu()
+      const item = items.find((m) => m.id === id)
+      if (!item) throw new Error('ไม่พบเมนูนี้')
+      return item
+    },
+    enabled: Boolean(id),
+  })
 
 export const useSession = (token: string | undefined) =>
   useQuery({

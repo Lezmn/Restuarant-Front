@@ -1,37 +1,52 @@
-import {
-  delay,
-  mockOrders,
-  mockServiceRequests,
-  mockSessions,
-  nextOrderNumber,
-} from '@/lib/mock/db'
-import {
-  OrderStatus,
-  ServiceRequestStatus,
-  ServiceRequestType,
-  type PaymentMethod,
-} from '@/types/enums'
-import type { Order, TableSession } from '@/types/models'
+import { apiClient } from '@/lib/api-client'
+import { mapMenuItem, mapOrder } from '@/lib/map'
+import type { ApiCategory, ApiOrder, ApiTableSession } from '@/types/api'
+import type { PaymentMethod } from '@/types/enums'
+import type { MenuItem, Order, TableSession } from '@/types/models'
 import type { CartLine } from './cart-store'
-import { lineUnitPrice } from './cart-store'
 
-// ฝั่งลูกค้าเข้าผ่าน QR ไม่ต้อง login — ของจริงคือ endpoint ใต้ /public
-// GET /public/sessions/:token, GET /public/sessions/:token/orders,
-// POST /public/orders, POST /public/call-staff, POST /public/checkout
+/**
+ * endpoint ใต้ /public ไม่ต้อง login — ใช้คู่กับ QR ที่โต๊ะ
+ * GET  /public/menu · /public/sessions/:token · /public/sessions/:token/orders
+ * POST /public/orders · /public/call-staff · /public/checkout
+ */
+
+/** /public/menu คืนเป็นหมวดหมู่ที่มีเมนูซ้อนอยู่ข้างใน จึงต้องแบนออกมา */
+export async function getPublicMenu(): Promise<MenuItem[]> {
+  const data = await apiClient<ApiCategory[]>('/public/menu')
+  return data.flatMap((c) =>
+    (c.menuItems ?? []).map((m) => mapMenuItem({ ...m, categoryId: c.id })),
+  )
+}
+
+export async function getPublicCategories() {
+  const data = await apiClient<ApiCategory[]>('/public/menu')
+  return data.map((c, index) => ({
+    id: c.id,
+    name: c.name,
+    sortOrder: c.sortOrder ?? index,
+  }))
+}
 
 export async function getSessionByToken(token: string): Promise<TableSession> {
-  await delay()
-  const session = mockSessions.find((s) => s.token === token)
-  if (!session) throw new Error('ไม่พบโต๊ะนี้ — กรุณาสแกน QR ใหม่อีกครั้ง')
-  return session
+  const data = await apiClient<ApiTableSession>(`/public/sessions/${token}`)
+  return {
+    id: data.id,
+    tableId: data.tableId ?? data.table?.id ?? '',
+    tableName: data.table ? String(data.table.number) : '-',
+    token: data.token,
+    status: data.status,
+    openedAt: data.openedAt,
+    closedAt: data.closedAt ?? null,
+    // /public/sessions ไม่ได้ส่ง total มา ฝั่งลูกค้าใช้ยอดจากรายการออเดอร์แทน
+    total: data.total ?? 0,
+  }
 }
 
 export async function getSessionOrders(token: string): Promise<Order[]> {
-  await delay()
-  const session = mockSessions.find((s) => s.token === token)
-  if (!session) throw new Error('ไม่พบโต๊ะนี้')
-  return mockOrders
-    .filter((o) => o.tableSessionId === session.id)
+  const data = await apiClient<ApiOrder[]>(`/public/sessions/${token}/orders`)
+  return data
+    .map(mapOrder)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
@@ -39,51 +54,29 @@ export async function submitOrder(vars: {
   token: string
   lines: CartLine[]
 }): Promise<Order> {
-  await delay(400)
-  const session = mockSessions.find((s) => s.token === vars.token)
-  if (!session) throw new Error('ไม่พบโต๊ะนี้')
   if (vars.lines.length === 0) throw new Error('ยังไม่มีรายการในตะกร้า')
 
-  const order: Order = {
-    id: `o-${Date.now()}`,
-    orderNumber: nextOrderNumber(),
-    tableSessionId: session.id,
-    tableName: session.tableName,
-    status: OrderStatus.PENDING,
-    createdAt: new Date().toISOString(),
-    items: vars.lines.map((line, index) => ({
-      id: `oi-${Date.now()}-${index}`,
-      menuItemId: line.menuItemId,
-      menuItemName: line.name,
-      imageUrl: line.imageUrl,
-      quantity: line.quantity,
-      unitPrice: lineUnitPrice(line),
-      note: line.note || null,
-      optionNames: line.options.map((o) => o.name),
-    })),
-  }
-
-  mockOrders.push(order)
-  return order
+  const data = await apiClient<ApiOrder>('/public/orders', {
+    method: 'POST',
+    body: JSON.stringify({
+      sessionToken: vars.token,
+      items: vars.lines.map((line) => ({
+        menuItemId: line.menuItemId,
+        quantity: line.quantity,
+        ...(line.note.trim() ? { note: line.note.trim() } : {}),
+        ...(line.options.length > 0
+          ? { optionIds: line.options.map((o) => o.id) }
+          : {}),
+      })),
+    }),
+  })
+  return mapOrder(data)
 }
 
-export async function callStaff(vars: {
-  token: string
-  note?: string
-}): Promise<void> {
-  await delay(300)
-  const session = mockSessions.find((s) => s.token === vars.token)
-  if (!session) throw new Error('ไม่พบโต๊ะนี้')
-
-  mockServiceRequests.push({
-    id: `sr-${Date.now()}`,
-    tableSessionId: session.id,
-    tableName: session.tableName,
-    type: ServiceRequestType.CALL_STAFF,
-    status: ServiceRequestStatus.PENDING,
-    paymentMethod: null,
-    note: vars.note ?? null,
-    createdAt: new Date().toISOString(),
+export async function callStaff(vars: { token: string }): Promise<void> {
+  await apiClient<unknown>('/public/call-staff', {
+    method: 'POST',
+    body: JSON.stringify({ sessionToken: vars.token }),
   })
 }
 
@@ -91,18 +84,11 @@ export async function requestCheckout(vars: {
   token: string
   method: PaymentMethod
 }): Promise<void> {
-  await delay(400)
-  const session = mockSessions.find((s) => s.token === vars.token)
-  if (!session) throw new Error('ไม่พบโต๊ะนี้')
-
-  mockServiceRequests.push({
-    id: `sr-${Date.now()}`,
-    tableSessionId: session.id,
-    tableName: session.tableName,
-    type: ServiceRequestType.CHECKOUT,
-    status: ServiceRequestStatus.PENDING,
-    paymentMethod: vars.method,
-    note: null,
-    createdAt: new Date().toISOString(),
+  await apiClient<unknown>('/public/checkout', {
+    method: 'POST',
+    body: JSON.stringify({
+      sessionToken: vars.token,
+      paymentMethod: vars.method,
+    }),
   })
 }

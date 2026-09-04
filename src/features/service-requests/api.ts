@@ -1,17 +1,19 @@
-import { delay, mockServiceRequests } from '@/lib/mock/db'
-import { ServiceRequestStatus } from '@/types/enums'
+import { apiClient } from '@/lib/api-client'
+import { mapServiceRequest } from '@/lib/map'
+import type { ApiServiceRequest } from '@/types/api'
 import type { Id, ServiceRequest } from '@/types/models'
 
+/** GET /service-requests @Roles(ADMIN, STAFF) */
 export async function getServiceRequests(): Promise<ServiceRequest[]> {
-  await delay()
-  return [...mockServiceRequests].sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt),
-  )
+  const data = await apiClient<ApiServiceRequest[]>('/service-requests')
+  return data
+    .map(mapServiceRequest)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
+/** PATCH /service-requests/:id/resolve */
 export async function resolveServiceRequest(id: Id): Promise<void> {
-  await delay(200)
-  const req = mockServiceRequests.find((r) => r.id === id)
-  if (!req) throw new Error('ไม่พบคำขอ')
-  req.status = ServiceRequestStatus.RESOLVED
+  await apiClient<unknown>(`/service-requests/${id}/resolve`, {
+    method: 'PATCH',
+  })
 }

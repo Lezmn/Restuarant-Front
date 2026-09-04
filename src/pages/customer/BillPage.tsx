@@ -4,7 +4,7 @@ import {
   useSessionOrders,
 } from '@/features/public/hooks'
 import { formatBaht } from '@/lib/format'
-import { orderTotal } from '@/lib/mock/db'
+import { itemTotal, orderTotal } from '@/features/orders/order-total'
 import { PaymentMethod } from '@/types/enums'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -59,7 +59,7 @@ export function CustomerBillPage() {
               )}
             </span>
             <span className="shrink-0 text-sm font-semibold text-amount">
-              {formatBaht(item.unitPrice * item.quantity)}
+              {formatBaht(itemTotal(item))}
             </span>
           </li>
         ))}

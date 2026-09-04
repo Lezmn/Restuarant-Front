@@ -1,8 +1,10 @@
-import { delay, mockUsers } from '@/lib/mock/db'
+import { apiClient } from '@/lib/api-client'
+import { mapUser } from '@/lib/map'
+import type { ApiLoginResponse } from '@/types/api'
 import type { User } from '@/types/models'
 
 export interface LoginPayload {
-  username: string
+  email: string
   password: string
 }
 
@@ -11,14 +13,12 @@ export interface LoginResponse {
   user: User
 }
 
-// ตอนต่อ backend จริง เปลี่ยนเป็น:
-// return apiClient<LoginResponse>('/auth/login', { method: 'POST', body: JSON.stringify(payload) })
+/** POST /auth/login — เข้าสู่ระบบด้วยอีเมล (backend ไม่ได้ใช้ username) */
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
-  await delay()
-  const found = mockUsers.find(
-    (u) => u.username === payload.username && u.password === payload.password,
-  )
-  if (!found) throw new Error('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')
-  const { password: _password, ...user } = found
-  return { accessToken: `mock.${user.username}`, user }
+  const data = await apiClient<ApiLoginResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+  return { accessToken: data.accessToken, user: mapUser(data.user) }
 }

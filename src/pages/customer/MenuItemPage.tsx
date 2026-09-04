@@ -1,6 +1,6 @@
 import { FoodImage } from '@/components/ui/FoodImage'
 import { QuantityStepper } from '@/components/ui/QuantityStepper'
-import { useMenuItem } from '@/features/menu/hooks'
+import { usePublicMenuItem } from '@/features/public/hooks'
 import { useCart, type CartOption } from '@/features/public/cart-store'
 import { formatBaht } from '@/lib/format'
 import type { MenuOptionGroup } from '@/types/models'
@@ -10,7 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 export function CustomerMenuItemPage() {
   const { token, menuItemId } = useParams()
   const navigate = useNavigate()
-  const { data: item, isPending, isError, error } = useMenuItem(menuItemId)
+  const { data: item, isPending, isError, error } = usePublicMenuItem(menuItemId)
   const add = useCart((s) => s.add)
 
   const [singleChoice, setSingleChoice] = useState<Record<string, string>>({})

@@ -1,6 +1,9 @@
 import { FoodImage } from '@/components/ui/FoodImage'
 import { SearchInput } from '@/components/ui/SearchInput'
-import { useCategories, useMenuItems } from '@/features/menu/hooks'
+import {
+  usePublicCategories,
+  usePublicMenu,
+} from '@/features/public/hooks'
 import { cartCount, cartTotal, useCart } from '@/features/public/cart-store'
 import { formatBaht } from '@/lib/format'
 import { useMemo, useState } from 'react'
@@ -8,8 +11,8 @@ import { Link, useParams } from 'react-router-dom'
 
 export function CustomerMenuPage() {
   const { token } = useParams()
-  const { data: categories } = useCategories()
-  const { data: items, isPending } = useMenuItems()
+  const { data: categories } = usePublicCategories()
+  const { data: items, isPending } = usePublicMenu()
   const lines = useCart((s) => s.lines)
 
   const [search, setSearch] = useState('')

@@ -136,7 +136,7 @@ export const router = createBrowserRouter([
         title="เข้าสู่ระบบ"
         subtitle="สำหรับพนักงาน"
         redirectTo="/employee"
-        hint="admin / cashier / kitchen / waiter"
+        hint="admin@ (ADMIN) · waiter@, cashier@ (STAFF) · kitchen@ (KITCHEN) — @restaurant.local"
       />,
     ),
   },
@@ -197,7 +197,7 @@ export const router = createBrowserRouter([
         subtitle="สำหรับเจ้าของร้าน"
         redirectTo="/owner/dashboard"
         allowedRoles={[Role.ADMIN]}
-        hint="owner / admin"
+        hint="admin@restaurant.local"
       />,
     ),
   },

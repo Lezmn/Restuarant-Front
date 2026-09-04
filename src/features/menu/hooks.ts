@@ -1,10 +1,13 @@
 import type { Id } from '@/types/models'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  createMenuItem,
+  deleteMenuItem,
   getCategories,
   getMenuItem,
   getMenuItems,
   setMenuItemAvailability,
+  updateMenuItem,
 } from './api'
 
 export const menuKeys = {
@@ -33,3 +36,15 @@ export function useSetMenuItemAvailability() {
     onSuccess: () => qc.invalidateQueries({ queryKey: menuKeys.items }),
   })
 }
+
+function useMenuMutation<TVars, TData>(fn: (vars: TVars) => Promise<TData>) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => qc.invalidateQueries({ queryKey: menuKeys.items }),
+  })
+}
+
+export const useCreateMenuItem = () => useMenuMutation(createMenuItem)
+export const useUpdateMenuItem = () => useMenuMutation(updateMenuItem)
+export const useDeleteMenuItem = () => useMenuMutation(deleteMenuItem)

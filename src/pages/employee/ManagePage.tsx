@@ -1,6 +1,14 @@
 import { FoodImage } from '@/components/ui/FoodImage'
 import { ErrorNote } from '@/components/ui/ErrorNote'
-import { useMenuItems, useSetMenuItemAvailability } from '@/features/menu/hooks'
+import {
+  useCreateMenuItem,
+  useDeleteMenuItem,
+  useMenuItems,
+  useSetMenuItemAvailability,
+  useUpdateMenuItem,
+} from '@/features/menu/hooks'
+import type { MenuItem } from '@/types/models'
+import { MenuFormDialog } from './MenuFormDialog'
 import { formatBaht } from '@/lib/format'
 import { useMemo, useState } from 'react'
 
@@ -9,8 +17,14 @@ type Tab = 'menu' | 'ingredient'
 export function ManagePage() {
   const { data: items, isPending } = useMenuItems()
   const setAvailability = useSetMenuItemAvailability()
+  const createItem = useCreateMenuItem()
+  const updateItem = useUpdateMenuItem()
+  const deleteItem = useDeleteMenuItem()
+
   const [tab, setTab] = useState<Tab>('menu')
   const [search, setSearch] = useState('')
+  /** null = ปิดฟอร์ม, 'new' = เพิ่มใหม่, object = แก้ไขเมนูนั้น */
+  const [editing, setEditing] = useState<MenuItem | 'new' | null>(null)
 
   const visible = useMemo(() => {
     const keyword = search.trim().toLowerCase()
@@ -20,10 +34,18 @@ export function ManagePage() {
 
   return (
     <div>
-      <ErrorNote error={setAvailability.error} />
+      <ErrorNote error={setAvailability.error ?? deleteItem.error} />
 
       {/* แถบเครื่องมือ: toggle เมนู/วัตถุดิบ + ค้นหา */}
-      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
+      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3 sm:flex-row sm:items-center sm:gap-4">
+        <button
+          type="button"
+          onClick={() => setEditing('new')}
+          className="rounded-full bg-brand-300 px-5 py-2 text-sm font-bold text-white transition hover:bg-brand-400 sm:mr-auto"
+        >
+          + เพิ่มเมนู
+        </button>
+
         <div className="flex gap-2">
           <TabButton active={tab === 'menu'} onClick={() => setTab('menu')}>
             เมนู
@@ -121,11 +143,59 @@ export function ManagePage() {
                       }
                     />
                   </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-200 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(item)}
+                      className="rounded-lg border-2 border-brand-300 py-1.5 text-xs font-bold text-brand-400 transition hover:bg-brand-50"
+                    >
+                      แก้ไข
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deleteItem.isPending}
+                      onClick={() => {
+                        if (confirm(`ลบเมนู "${item.name}" ?`)) {
+                          deleteItem.mutate(item.id)
+                        }
+                      }}
+                      className="rounded-lg border-2 border-danger py-1.5 text-xs font-bold text-danger transition hover:bg-danger/10 disabled:opacity-60"
+                    >
+                      ลบ
+                    </button>
+                  </div>
                 </div>
               </article>
             ))}
           </div>
         </>
+      )}
+
+      {editing === 'new' && (
+        <MenuFormDialog
+          isSaving={createItem.isPending}
+          error={createItem.error}
+          onCancel={() => setEditing(null)}
+          onSubmit={(input) =>
+            createItem.mutate(input, { onSuccess: () => setEditing(null) })
+          }
+        />
+      )}
+
+      {editing && editing !== 'new' && (
+        <MenuFormDialog
+          item={editing}
+          isSaving={updateItem.isPending}
+          error={updateItem.error}
+          onCancel={() => setEditing(null)}
+          onSubmit={(input) =>
+            updateItem.mutate(
+              { id: editing.id, input },
+              { onSuccess: () => setEditing(null) },
+            )
+          }
+        />
       )}
     </div>
   )
