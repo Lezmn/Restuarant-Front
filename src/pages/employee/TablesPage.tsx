@@ -11,6 +11,7 @@ import {
 import { useTables } from '@/features/tables/hooks'
 import { TableSessionStatus, TableStatus } from '@/types/enums'
 import type { RestaurantTable, TableSession } from '@/types/models'
+import { RESTAURANT_NAME } from '@/lib/mock/db'
 import { QRCodeSVG } from 'qrcode.react'
 import { useState } from 'react'
 
@@ -101,7 +102,12 @@ export function TablesPage() {
                   type="button"
                   disabled={!canOpen || openSession.isPending}
                   title={canOpen ? undefined : 'ต้องเป็น ADMIN หรือ WAITER'}
-                  onClick={() => openSession.mutate(table.id)}
+                  onClick={() =>
+                    openSession.mutate(table.id, {
+                      // เปิดโต๊ะเสร็จเด้ง QR ขึ้นมาเลย จะได้กดพิมพ์ต่อได้ทันที
+                      onSuccess: (session) => setQrTarget(session),
+                    })
+                  }
                   className="mt-4 w-full rounded-lg bg-brand-300 py-2.5 text-sm font-bold text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-gray-300"
                 >
                   เปิดโต๊ะ + สร้าง QR
@@ -144,11 +150,23 @@ function QrDialog({
   return (
     <Modal title={`QR โต๊ะ ${session.tableName}`} onClose={onClose}>
       <div className="flex flex-col items-center">
-        <div className="rounded-xl border border-gray-200 p-4">
-          <QRCodeSVG value={url} size={220} />
+        {/* .print-area = ส่วนเดียวที่จะติดไปกับกระดาษ (ดู @media print ใน index.css) */}
+        <div className="print-area flex flex-col items-center rounded-xl border border-gray-200 p-4">
+          <div className="hidden text-center print:block">
+            <p className="text-2xl font-bold text-black">{RESTAURANT_NAME}</p>
+            <p className="mt-1 text-4xl font-bold text-black">
+              โต๊ะ {session.tableName}
+            </p>
+          </div>
+
+          <QRCodeSVG value={url} size={220} className="print:h-80 print:w-80" />
+
+          <p className="hidden text-center text-lg font-semibold text-black print:block">
+            สแกนเพื่อดูเมนูและสั่งอาหาร
+          </p>
         </div>
 
-        <p className="mt-3 text-sm text-gray-600">
+        <p className="mt-3 text-sm text-gray-600 print:hidden">
           ให้ลูกค้าสแกนเพื่อสั่งอาหารที่โต๊ะนี้
         </p>
 
@@ -156,10 +174,10 @@ function QrDialog({
           readOnly
           value={url}
           onFocus={(e) => e.target.select()}
-          className="mt-3 w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 text-center text-xs text-gray-700"
+          className="mt-3 w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 text-center text-xs text-gray-700 print:hidden"
         />
 
-        <div className="mt-4 grid w-full grid-cols-2 gap-3">
+        <div className="mt-4 grid w-full grid-cols-2 gap-3 print:hidden">
           <button
             type="button"
             onClick={copy}

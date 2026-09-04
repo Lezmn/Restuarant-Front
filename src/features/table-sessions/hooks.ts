@@ -8,7 +8,8 @@ export const sessionKeys = {
 export const useSessions = () =>
   useQuery({ queryKey: sessionKeys.all, queryFn: getSessions })
 
-function useSessionMutation<TVars>(fn: (vars: TVars) => Promise<unknown>) {
+/** เปิด/ปิดโต๊ะกระทบทั้ง session และสถานะโต๊ะ จึงล้าง cache ทั้งสองก้อนเหมือนกัน */
+function useSessionMutation<TVars, TData>(fn: (vars: TVars) => Promise<TData>) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: fn,
