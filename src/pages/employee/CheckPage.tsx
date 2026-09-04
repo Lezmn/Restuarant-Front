@@ -4,7 +4,8 @@ import { useOrders } from '@/features/orders/hooks'
 import { useCreatePayment } from '@/features/payments/hooks'
 import { useServiceRequests } from '@/features/service-requests/hooks'
 import { formatBaht } from '@/lib/format'
-import { mockSessions, orderTotal } from '@/lib/mock/db'
+import { useSessions } from '@/features/table-sessions/hooks'
+import { orderTotal } from '@/lib/mock/db'
 import {
   PaymentMethod,
   ServiceRequestStatus,
@@ -52,11 +53,11 @@ interface PayTarget {
 export function CheckPage() {
   const { data: orders, isPending } = useOrders({ refetchInterval: POLL_MS })
   const { data: requests } = useServiceRequests({ refetchInterval: POLL_MS })
+  const { data: sessions } = useSessions()
   const createPayment = useCreatePayment()
   const [target, setTarget] = useState<PayTarget | null>(null)
 
-  // ของจริงใช้ GET /table-sessions?status=OPEN — ตอนนี้อ่านจาก mock
-  const openSessions = mockSessions.filter(
+  const openSessions = (sessions ?? []).filter(
     (s) => s.status === TableSessionStatus.OPEN,
   )
 
