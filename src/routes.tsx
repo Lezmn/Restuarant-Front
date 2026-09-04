@@ -1,28 +1,116 @@
-import { CustomerLayout } from '@/components/layout/CustomerLayout'
-import { EmployeeLayout } from '@/components/layout/EmployeeLayout'
-import { OwnerLayout } from '@/components/layout/OwnerLayout'
+// oxlint-disable react/only-export-components -- ไฟล์นี้เป็นตารางเส้นทาง ไม่ใช่โมดูลของ component
+// การประกาศ lazy component ไว้ที่นี่คือจุดประสงค์ของไฟล์ ไม่ได้ทำให้ Fast Refresh เสีย
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
+import { PageLoading } from '@/components/ui/PageLoading'
 import { pageRoles } from '@/features/auth/permissions'
 import { Role } from '@/types/enums'
-import { CustomerBillPage } from '@/pages/customer/BillPage'
-import { CustomerCartPage } from '@/pages/customer/CartPage'
-import { CustomerMenuItemPage } from '@/pages/customer/MenuItemPage'
-import { CustomerMenuPage } from '@/pages/customer/MenuPage'
-import { CustomerStatusPage } from '@/pages/customer/StatusPage'
-import { LoginPage } from '@/pages/LoginPage'
-import { NotFoundPage } from '@/pages/NotFoundPage'
-import { DashboardPage } from '@/pages/owner/DashboardPage'
-import { FinancePage } from '@/pages/owner/FinancePage'
-import { CheckPage } from '@/pages/employee/CheckPage'
-import { EmployeeHome } from '@/pages/employee/EmployeeHome'
-
-import { ManagePage } from '@/pages/employee/ManagePage'
-import { OrderPage } from '@/pages/employee/OrderPage'
-import { OrdersPage } from '@/pages/employee/OrdersPage'
-import { RequestsPage } from '@/pages/employee/RequestsPage'
-import { TablesPage } from '@/pages/employee/TablesPage'
-import { UsersPage } from '@/pages/employee/UsersPage'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
+
+/**
+ * โหลดโค้ดแยกตามหน้า (code splitting)
+ * ลูกค้าที่สแกน QR จะไม่ต้องโหลดหน้าครัว / Dashboard / ตัวสร้าง QR ที่ไม่ได้ใช้
+ *
+ * Vite 8 ใช้ Rolldown ซึ่งแตกไฟล์ให้เองจาก dynamic import ตรงนี้
+ * (option manualChunks ของ Rollup เดิมใช้ไม่ได้แล้ว ไม่ต้องตั้งค่าใน vite.config)
+ */
+const CustomerLayout = lazy(() =>
+  import('@/components/layout/CustomerLayout').then((m) => ({
+    default: m.CustomerLayout,
+  })),
+)
+const EmployeeLayout = lazy(() =>
+  import('@/components/layout/EmployeeLayout').then((m) => ({
+    default: m.EmployeeLayout,
+  })),
+)
+const OwnerLayout = lazy(() =>
+  import('@/components/layout/OwnerLayout').then((m) => ({
+    default: m.OwnerLayout,
+  })),
+)
+
+const LoginPage = lazy(() =>
+  import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })),
+)
+const NotFoundPage = lazy(() =>
+  import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
+)
+
+const CustomerMenuPage = lazy(() =>
+  import('@/pages/customer/MenuPage').then((m) => ({
+    default: m.CustomerMenuPage,
+  })),
+)
+const CustomerMenuItemPage = lazy(() =>
+  import('@/pages/customer/MenuItemPage').then((m) => ({
+    default: m.CustomerMenuItemPage,
+  })),
+)
+const CustomerCartPage = lazy(() =>
+  import('@/pages/customer/CartPage').then((m) => ({
+    default: m.CustomerCartPage,
+  })),
+)
+const CustomerBillPage = lazy(() =>
+  import('@/pages/customer/BillPage').then((m) => ({
+    default: m.CustomerBillPage,
+  })),
+)
+const CustomerStatusPage = lazy(() =>
+  import('@/pages/customer/StatusPage').then((m) => ({
+    default: m.CustomerStatusPage,
+  })),
+)
+
+const EmployeeHome = lazy(() =>
+  import('@/pages/employee/EmployeeHome').then((m) => ({
+    default: m.EmployeeHome,
+  })),
+)
+const OrderPage = lazy(() =>
+  import('@/pages/employee/OrderPage').then((m) => ({ default: m.OrderPage })),
+)
+const CheckPage = lazy(() =>
+  import('@/pages/employee/CheckPage').then((m) => ({ default: m.CheckPage })),
+)
+const ManagePage = lazy(() =>
+  import('@/pages/employee/ManagePage').then((m) => ({
+    default: m.ManagePage,
+  })),
+)
+const OrdersPage = lazy(() =>
+  import('@/pages/employee/OrdersPage').then((m) => ({
+    default: m.OrdersPage,
+  })),
+)
+const TablesPage = lazy(() =>
+  import('@/pages/employee/TablesPage').then((m) => ({
+    default: m.TablesPage,
+  })),
+)
+const RequestsPage = lazy(() =>
+  import('@/pages/employee/RequestsPage').then((m) => ({
+    default: m.RequestsPage,
+  })),
+)
+const UsersPage = lazy(() =>
+  import('@/pages/employee/UsersPage').then((m) => ({ default: m.UsersPage })),
+)
+
+const DashboardPage = lazy(() =>
+  import('@/pages/owner/DashboardPage').then((m) => ({
+    default: m.DashboardPage,
+  })),
+)
+const FinancePage = lazy(() =>
+  import('@/pages/owner/FinancePage').then((m) => ({ default: m.FinancePage })),
+)
+
+/** ครอบ Suspense ให้ทุก element ที่โหลดแบบ lazy กันจอว่างระหว่างดึงไฟล์ */
+const s = (node: ReactNode) => (
+  <Suspense fallback={<PageLoading />}>{node}</Suspense>
+)
 
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/employee" replace /> },
@@ -30,26 +118,26 @@ export const router = createBrowserRouter([
   // ---------- ฝั่งลูกค้า: เข้าผ่าน QR ไม่ต้อง login ----------
   {
     path: '/t/:token',
-    element: <CustomerLayout />,
+    element: s(<CustomerLayout />),
     children: [
-      { index: true, element: <CustomerMenuPage /> },
-      { path: 'menu/:menuItemId', element: <CustomerMenuItemPage /> },
-      { path: 'cart', element: <CustomerCartPage /> },
-      { path: 'bill', element: <CustomerBillPage /> },
-      { path: 'status', element: <CustomerStatusPage /> },
+      { index: true, element: s(<CustomerMenuPage />) },
+      { path: 'menu/:menuItemId', element: s(<CustomerMenuItemPage />) },
+      { path: 'cart', element: s(<CustomerCartPage />) },
+      { path: 'bill', element: s(<CustomerBillPage />) },
+      { path: 'status', element: s(<CustomerStatusPage />) },
     ],
   },
 
   // ---------- ฝั่งพนักงาน: ต้อง login + เช็ค role ----------
   {
     path: '/employee/login',
-    element: (
+    element: s(
       <LoginPage
         title="เข้าสู่ระบบ"
         subtitle="สำหรับพนักงาน"
         redirectTo="/employee"
         hint="admin / cashier / kitchen / waiter"
-      />
+      />,
     ),
   },
   {
@@ -58,41 +146,41 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       {
-        element: <EmployeeLayout />,
+        element: s(<EmployeeLayout />),
         children: [
-          { index: true, element: <EmployeeHome /> },
+          { index: true, element: s(<EmployeeHome />) },
 
           // ชั้นที่ 2: เช็ค role ทีละหน้า ตรงกับ @Roles(...) ฝั่ง NestJS
           {
             element: <ProtectedRoute roles={pageRoles.order} />,
-            children: [{ path: 'order', element: <OrderPage /> }],
+            children: [{ path: 'order', element: s(<OrderPage />) }],
           },
           {
             element: <ProtectedRoute roles={pageRoles.check} />,
-            children: [{ path: 'check', element: <CheckPage /> }],
+            children: [{ path: 'check', element: s(<CheckPage />) }],
           },
           {
             element: <ProtectedRoute roles={pageRoles.manage} />,
-            children: [{ path: 'manage', element: <ManagePage /> }],
+            children: [{ path: 'manage', element: s(<ManagePage />) }],
+          },
+          {
+            element: <ProtectedRoute roles={pageRoles.tables} />,
+            children: [{ path: 'tables', element: s(<TablesPage />) }],
           },
 
           // หน้าที่ไม่มีในดีไซน์ แต่เขียนไว้แล้วและ backend รองรับ
           // เข้าถึงได้ทาง URL ตรง แต่ไม่ได้อยู่ในแถบล่าง
           {
             element: <ProtectedRoute roles={pageRoles.orders} />,
-            children: [{ path: 'orders', element: <OrdersPage /> }],
-          },
-          {
-            element: <ProtectedRoute roles={pageRoles.tables} />,
-            children: [{ path: 'tables', element: <TablesPage /> }],
+            children: [{ path: 'orders', element: s(<OrdersPage />) }],
           },
           {
             element: <ProtectedRoute roles={pageRoles.requests} />,
-            children: [{ path: 'requests', element: <RequestsPage /> }],
+            children: [{ path: 'requests', element: s(<RequestsPage />) }],
           },
           {
             element: <ProtectedRoute roles={pageRoles.users} />,
-            children: [{ path: 'users', element: <UsersPage /> }],
+            children: [{ path: 'users', element: s(<UsersPage />) }],
           },
         ],
       },
@@ -103,14 +191,14 @@ export const router = createBrowserRouter([
   // ดีไซน์แยกหน้า login ของเจ้าของร้านออกจากพนักงาน (Desktop-16)
   {
     path: '/owner/login',
-    element: (
+    element: s(
       <LoginPage
         title="ร้านอาหาร"
         subtitle="สำหรับเจ้าของร้าน"
         redirectTo="/owner/dashboard"
         allowedRoles={[Role.ADMIN]}
         hint="owner / admin"
-      />
+      />,
     ),
   },
   {
@@ -124,15 +212,15 @@ export const router = createBrowserRouter([
     ),
     children: [
       {
-        element: <OwnerLayout />,
+        element: s(<OwnerLayout />),
         children: [
           { index: true, element: <Navigate to="/owner/dashboard" replace /> },
-          { path: 'dashboard', element: <DashboardPage /> },
-          { path: 'finance', element: <FinancePage /> },
+          { path: 'dashboard', element: s(<DashboardPage />) },
+          { path: 'finance', element: s(<FinancePage />) },
         ],
       },
     ],
   },
 
-  { path: '*', element: <NotFoundPage /> },
+  { path: '*', element: s(<NotFoundPage />) },
 ])
