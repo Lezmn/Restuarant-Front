@@ -19,9 +19,12 @@ const issuedAt = (iso: string) =>
 /** ใบเสร็จหลังรับชำระเงิน — พิมพ์ได้ด้วย .print-area เหมือนป้าย QR */
 export function ReceiptDialog({
   payment,
+  note,
   onClose,
 }: {
   payment: Payment
+  /** หมายเหตุที่พนักงานพิมพ์ตอนรับเงิน — พิมพ์ลงใบเสร็จอย่างเดียว backend ยังไม่มี field นี้ */
+  note?: string
   onClose: () => void
 }) {
   const receipt = payment.receipt
@@ -105,6 +108,12 @@ export function ReceiptDialog({
             </dd>
           </div>
         </dl>
+
+        {note && (
+          <p className="mt-3 border-t border-dashed border-gray-300 pt-3 text-sm text-gray-700">
+            หมายเหตุ: {note}
+          </p>
+        )}
 
         <p className="mt-4 text-center text-xs text-gray-500">
           ขอบคุณที่ใช้บริการ

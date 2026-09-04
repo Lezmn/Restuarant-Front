@@ -54,6 +54,8 @@ interface PayTarget {
   tableName: string
   method: PaymentMethod
   amountDue: number
+  /** ลูกค้ากดเช็คบิลมาเองพร้อมเลือกวิธีจ่ายแล้วหรือยัง */
+  chosenByCustomer: boolean
 }
 
 export function CheckPage() {
@@ -66,6 +68,8 @@ export function CheckPage() {
   const [target, setTarget] = useState<PayTarget | null>(null)
   /** ใบเสร็จที่เพิ่งออก — เปิดให้พิมพ์ทันทีหลังรับเงิน */
   const [receipt, setReceipt] = useState<Payment | null>(null)
+  /** หมายเหตุที่พนักงานพิมพ์ตอนรับเงิน — backend ยังไม่มี field นี้ จึงติดไปกับใบเสร็จที่พิมพ์เท่านั้น */
+  const [receiptNote, setReceiptNote] = useState('')
 
   const openSessions = (sessions ?? []).filter(
     (s) => s.status === TableSessionStatus.OPEN,
@@ -180,6 +184,9 @@ export function CheckPage() {
                               tableName: session.tableName,
                               method,
                               amountDue: outstanding,
+                              chosenByCustomer: Boolean(
+                                checkout?.paymentMethod,
+                              ),
                             })
                           }
                           title="บันทึกการชำระเงิน"
@@ -214,7 +221,11 @@ export function CheckPage() {
       </div>
 
       {receipt && (
-        <ReceiptDialog payment={receipt} onClose={() => setReceipt(null)} />
+        <ReceiptDialog
+          payment={receipt}
+          note={receiptNote}
+          onClose={() => setReceipt(null)}
+        />
       )}
 
       {target && (
@@ -222,7 +233,7 @@ export function CheckPage() {
           target={target}
           isSaving={createPayment.isPending}
           onCancel={() => setTarget(null)}
-          onSubmit={(method) =>
+          onSubmit={(method, note) =>
             createPayment.mutate(
               {
                 tableSessionId: target.sessionId,
@@ -232,6 +243,7 @@ export function CheckPage() {
               {
                 onSuccess: (payment) => {
                   setTarget(null)
+                  setReceiptNote(note)
                   setReceipt(payment)
                 },
               },
@@ -254,18 +266,24 @@ function PaymentDialog({
   target: PayTarget
   isSaving: boolean
   onCancel: () => void
-  onSubmit: (method: PaymentMethod) => void
+  onSubmit: (method: PaymentMethod, note: string) => void
 }) {
-  // ตั้งต้นตามที่ลูกค้าเลือกมา แต่หน้าเคาน์เตอร์เปลี่ยนได้ (ลูกค้าเปลี่ยนใจตอนจ่ายบ่อย)
+  // เติมยอดที่ต้องจ่ายไว้ให้ก่อน พนักงานแก้ได้ถ้าลูกค้าจ่ายไม่เท่ากัน
+  const [amount, setAmount] = useState(String(target.amountDue))
+  const [note, setNote] = useState('')
+  // โต๊ะที่ลูกค้าไม่ได้กดเช็คบิลจาก QR ต้องให้พนักงานเลือกวิธีจ่ายเอง
   const [method, setMethod] = useState<PaymentMethod>(target.method)
 
   const isPromptPay = method === PaymentMethod.PROMPTPAY
+  const change = (Number(amount) || 0) - target.amountDue
 
   // QR ผูกยอดเงินไว้ด้วย ลูกค้าจึงไม่ต้องกรอกยอดเอง
   const qrPayload = useMemo(
     () =>
-      isPromptPay ? buildPromptPayPayload(PROMPTPAY_ID, target.amountDue) : '',
-    [isPromptPay, target.amountDue],
+      isPromptPay
+        ? buildPromptPayPayload(PROMPTPAY_ID, Number(amount) || 0)
+        : '',
+    [isPromptPay, amount],
   )
 
   return (
@@ -273,36 +291,47 @@ function PaymentDialog({
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          onSubmit(method)
+          onSubmit(method, note.trim())
         }}
       >
-        <p className="mb-3 text-sm text-gray-500">โต๊ะ {target.tableName}</p>
+        <p className="mb-3 text-sm text-gray-500">
+          โต๊ะ {target.tableName} · ยอดที่ต้องจ่าย{' '}
+          <span className="font-bold text-black">
+            {formatBaht(target.amountDue)}
+          </span>
+        </p>
 
-        <div className="grid grid-cols-2 gap-3">
-          {payMethods.map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMethod(m)}
-              className={`rounded-lg border-2 py-2.5 text-sm font-bold transition ${
-                method === m
-                  ? `border-current ${methodColor[m]} bg-brand-50`
-                  : 'border-gray-300 text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              {methodLabel[m]}
-            </button>
-          ))}
-        </div>
+        {/* ถ้าลูกค้าเลือกวิธีจ่ายมาแล้วก็ใช้ตามนั้น ไม่ต้องมีปุ่มให้กดเพิ่ม */}
+        {!target.chosenByCustomer && (
+          <div className="mb-4 grid grid-cols-2 gap-3">
+            {payMethods.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMethod(m)}
+                className={`rounded-lg border-2 py-2.5 text-sm font-bold transition ${
+                  method === m
+                    ? `border-current ${methodColor[m]} bg-brand-50`
+                    : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                {methodLabel[m]}
+              </button>
+            ))}
+          </div>
+        )}
 
         {isPromptPay && (
-          <div className="mt-4 flex flex-col items-center rounded-xl border-2 border-promptpay/30 bg-promptpay/5 p-4">
+          <div className="mb-4 flex flex-col items-center rounded-xl border-2 border-promptpay/30 bg-promptpay/5 p-4">
             <p className="mb-2 text-sm font-bold text-promptpay">
               ให้ลูกค้าสแกนเพื่อจ่าย
             </p>
             <div className="rounded-lg bg-white p-3">
               <QRCodeSVG value={qrPayload} size={180} />
             </div>
+            <p className="mt-2 text-lg font-bold text-black">
+              {formatBaht(Number(amount) || 0)}
+            </p>
 
             {IS_DEMO_PROMPTPAY && (
               <p className="mt-2 text-center text-xs text-danger">
@@ -317,9 +346,8 @@ function PaymentDialog({
           </div>
         )}
 
-        {/* ยอดคิดจาก backend ทั้งหมด แก้ตรงนี้ไม่ได้ เพื่อไม่ให้ยอดในใบเสร็จเพี้ยน */}
-        <div className="mt-4 flex items-center justify-between rounded-lg bg-brand-50 px-4 py-3">
-          <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+        <label className="block">
+          <span className="flex items-center gap-1.5 text-sm text-gray-700">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -334,12 +362,48 @@ function PaymentDialog({
                 strokeLinecap="round"
               />
             </svg>
-            ยอดที่ต้องเก็บ
+            ราคาที่จ่าย
           </span>
-          <span className="text-xl font-bold text-amount">
-            {formatBaht(target.amountDue)}
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="mt-1 w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 outline-none focus:border-brand-300 focus:bg-white"
+          />
+        </label>
+
+        {/* รับเงินมามากกว่ายอด = ต้องทอน — ช่วยคิดให้เฉย ๆ ยอดที่บันทึกยังเป็นยอดจริงของบิล */}
+        {!isPromptPay && change > 0 && (
+          <p className="mt-1 text-right text-sm font-semibold text-brand-400">
+            เงินทอน {formatBaht(change)}
+          </p>
+        )}
+
+        <label className="mt-4 block">
+          <span className="flex items-center gap-1.5 text-sm text-gray-700">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden
+              className="h-4 w-4 text-brand-400"
+            >
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <path d="M7 9h10M7 13h6" strokeLinecap="round" />
+            </svg>
+            รายละเอียด
           </span>
-        </div>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={3}
+            placeholder="พิมพ์ลงบนใบเสร็จ (ยังไม่ได้เก็บในระบบ)"
+            className="mt-1 w-full resize-none rounded border border-gray-300 bg-gray-100 px-3 py-2 outline-none focus:border-brand-300 focus:bg-white"
+          />
+        </label>
 
         <div className="mt-5 grid grid-cols-2 gap-4">
           <button
@@ -354,7 +418,7 @@ function PaymentDialog({
             disabled={isSaving}
             className="rounded bg-plus py-2.5 font-bold text-white transition hover:brightness-95 disabled:opacity-60"
           >
-            {isSaving ? 'กำลังบันทึก...' : 'รับเงินแล้ว'}
+            {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
           </button>
         </div>
       </form>
