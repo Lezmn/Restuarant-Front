@@ -8,7 +8,8 @@ export async function getCategories(): Promise<Category[]> {
 
 export async function getMenuItems(): Promise<MenuItem[]> {
   await delay()
-  return mockMenuItems
+  // คืน copy ด้วยเหตุผลเดียวกับ getTables
+  return mockMenuItems.map((m) => ({ ...m }))
 }
 
 export async function getMenuItem(id: Id): Promise<MenuItem> {

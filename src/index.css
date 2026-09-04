@@ -27,6 +27,10 @@
   --color-field: #fafafa;
   --color-field-text: #1c1b1f;
 
+  /* ---- สีตามวิธีชำระเงิน ---- */
+  /* NOTE: ค่าฟ้ายังไม่ได้ยืนยันกับ Figma (โควตา MCP หมด) — คาดจากภาพหน้าจอ */
+  --color-promptpay: #2f6fed;
+
   /* ---- ตาราง (หน้า Check ฝั่งพนักงาน) ---- */
   /* NOTE: ยังไม่ได้ยืนยันค่ากับ Figma (โควตา MCP หมด) — คาดจากภาพหน้าจอ */
   --color-table-head: #1e73be;
