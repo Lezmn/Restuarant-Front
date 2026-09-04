@@ -21,7 +21,11 @@ export interface CartLine {
 }
 
 interface CartState {
+  /** token ของ session ที่ตะกร้านี้เป็นเจ้าของ — กันตะกร้าโต๊ะเก่าติดมาโต๊ะใหม่ */
+  token: string | null
   lines: CartLine[]
+  /** เรียกตอนเข้าหน้าลูกค้า: ถ้าเป็นคนละโต๊ะให้ล้างตะกร้าทิ้ง */
+  bindToken: (token: string) => void
   add: (line: Omit<CartLine, 'lineId'>) => void
   setQuantity: (lineId: string, quantity: number) => void
   remove: (lineId: string) => void
@@ -47,7 +51,13 @@ export const cartCount = (lines: CartLine[]) =>
 export const useCart = create<CartState>()(
   persist(
     (set) => ({
+      token: null,
       lines: [],
+
+      bindToken: (token) =>
+        set((state) =>
+          state.token === token ? state : { token, lines: [] },
+        ),
 
       add: (line) =>
         set((state) => {

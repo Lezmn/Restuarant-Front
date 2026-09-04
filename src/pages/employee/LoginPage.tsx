@@ -10,7 +10,7 @@ export function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
 
-  if (user) return <Navigate to="/staff" replace />
+  if (user) return <Navigate to="/employee" replace />
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
@@ -18,7 +18,7 @@ export function LoginPage() {
         onSubmit={(e) => {
           e.preventDefault()
           login.mutate({ username, password }, {
-            onSuccess: () => navigate('/staff'),
+            onSuccess: () => navigate('/employee'),
           })
         }}
         className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-6 shadow-sm"

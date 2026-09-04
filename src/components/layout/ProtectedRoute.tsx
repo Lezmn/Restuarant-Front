@@ -9,11 +9,11 @@ export function ProtectedRoute({ roles }: { roles?: Role[] }) {
   const location = useLocation()
 
   if (!user) {
-    return <Navigate to="/staff/login" state={{ from: location }} replace />
+    return <Navigate to="/employee/login" state={{ from: location }} replace />
   }
 
   if (roles && !roles.includes(user.role)) {
-    return <Navigate to="/staff" replace />
+    return <Navigate to="/employee" replace />
   }
 
   return <Outlet />

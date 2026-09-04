@@ -31,7 +31,7 @@ export async function apiClient<T>(
 
   if (res.status === 401) {
     authStorage.clear()
-    window.location.href = '/staff/login'
+    window.location.href = '/employee/login'
     throw new ApiError(401, 'ยังไม่ได้เข้าสู่ระบบ')
   }
 

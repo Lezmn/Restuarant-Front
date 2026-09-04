@@ -1,6 +1,11 @@
 import type { Id } from '@/types/models'
-import { useQuery } from '@tanstack/react-query'
-import { getCategories, getMenuItem, getMenuItems } from './api'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  getCategories,
+  getMenuItem,
+  getMenuItems,
+  setMenuItemAvailability,
+} from './api'
 
 export const menuKeys = {
   categories: ['categories'] as const,
@@ -20,3 +25,11 @@ export const useMenuItem = (id: Id | undefined) =>
     queryFn: () => getMenuItem(id as Id),
     enabled: Boolean(id),
   })
+
+export function useSetMenuItemAvailability() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: setMenuItemAvailability,
+    onSuccess: () => qc.invalidateQueries({ queryKey: menuKeys.items }),
+  })
+}

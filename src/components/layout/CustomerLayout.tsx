@@ -1,7 +1,7 @@
 import { useSession } from '@/features/public/hooks'
 import { cartCount, useCart } from '@/features/public/cart-store'
 import { RESTAURANT_NAME } from '@/lib/mock/db'
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { NavLink, Outlet, useParams } from 'react-router-dom'
 
 function IconHome() {
@@ -51,9 +51,33 @@ interface Tab {
 
 export function CustomerLayout() {
   const { token } = useParams()
-  const { data: session } = useSession(token)
+  const { data: session, isPending, isError, error } = useSession(token)
   const lines = useCart((s) => s.lines)
+  const bindToken = useCart((s) => s.bindToken)
   const count = cartCount(lines)
+
+  // สแกน QR โต๊ะใหม่บนเครื่องเดิม ต้องไม่เอาตะกร้าโต๊ะเก่ามาด้วย
+  useEffect(() => {
+    if (token) bindToken(token)
+  }, [token, bindToken])
+
+  // token ผิด/หมดอายุ — กันตั้งแต่หน้าแรก ไม่ให้สั่งของแล้วไปพังตอนกดส่ง
+  if (isError) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
+        <span aria-hidden className="text-4xl">
+          🔒
+        </span>
+        <h1 className="text-lg font-bold text-ink">เปิดโต๊ะนี้ไม่ได้</h1>
+        <p className="text-sm text-gray-600">
+          {error instanceof Error ? error.message : 'ไม่พบโต๊ะนี้'}
+        </p>
+        <p className="text-sm text-gray-500">
+          กรุณาสแกน QR ที่โต๊ะใหม่อีกครั้ง หรือเรียกพนักงาน
+        </p>
+      </div>
+    )
+  }
 
   const tabs: Tab[] = [
     { to: `/t/${token}`, label: 'เมนูอาหาร', icon: <IconHome />, end: true },
@@ -73,9 +97,9 @@ export function CustomerLayout() {
             <p className="truncate text-sm font-bold text-brand-400 sm:text-base">
               {RESTAURANT_NAME}
             </p>
-            {session && (
-              <p className="text-xs text-gray-500">โต๊ะ {session.tableName}</p>
-            )}
+            <p className="text-xs text-gray-500">
+              {isPending ? 'กำลังเปิดโต๊ะ...' : `โต๊ะ ${session?.tableName ?? '-'}`}
+            </p>
           </div>
 
           {/* md ขึ้นไปย้าย nav มาไว้บน แล้วซ่อนแถบล่าง */}

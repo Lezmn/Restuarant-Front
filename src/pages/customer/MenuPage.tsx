@@ -1,4 +1,5 @@
 import { FoodImage } from '@/components/ui/FoodImage'
+import { SearchInput } from '@/components/ui/SearchInput'
 import { useCategories, useMenuItems } from '@/features/menu/hooks'
 import { cartCount, cartTotal, useCart } from '@/features/public/cart-store'
 import { formatBaht } from '@/lib/format'
@@ -28,27 +29,11 @@ export function CustomerMenuPage() {
 
   return (
     <div>
-      {/* ค้นหา */}
-      <label className="relative block">
-        <span className="sr-only">ค้นหาเมนูอาหาร</span>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-brand-50"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-        </svg>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="ค้นหาเมนูอาหาร"
-          className="w-full rounded-xl border border-brand-500 bg-brand-300/90 py-3 pr-4 pl-12 text-sm font-semibold text-white shadow-md outline-none placeholder:text-brand-50 focus:bg-brand-300"
-        />
-      </label>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="ค้นหาเมนูอาหาร"
+      />
 
       {/* หมวดหมู่ */}
       <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1">

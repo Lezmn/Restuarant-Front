@@ -1,25 +1,29 @@
 import { CustomerLayout } from '@/components/layout/CustomerLayout'
+import { EmployeeLayout } from '@/components/layout/EmployeeLayout'
+import { OwnerLayout } from '@/components/layout/OwnerLayout'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
-import { StaffLayout } from '@/components/layout/StaffLayout'
+import { pageRoles } from '@/features/auth/permissions'
 import { CustomerBillPage } from '@/pages/customer/BillPage'
 import { CustomerCartPage } from '@/pages/customer/CartPage'
 import { CustomerMenuItemPage } from '@/pages/customer/MenuItemPage'
 import { CustomerMenuPage } from '@/pages/customer/MenuPage'
 import { CustomerStatusPage } from '@/pages/customer/StatusPage'
-import { CashierPage } from '@/pages/staff/CashierPage'
-import { KitchenPage } from '@/pages/staff/KitchenPage'
-import { LoginPage } from '@/pages/staff/LoginPage'
-import { MenuPage } from '@/pages/staff/MenuPage'
-import { OrdersPage } from '@/pages/staff/OrdersPage'
-import { RequestsPage } from '@/pages/staff/RequestsPage'
-import { StaffHome } from '@/pages/staff/StaffHome'
-import { TablesPage } from '@/pages/staff/TablesPage'
-import { UsersPage } from '@/pages/staff/UsersPage'
-import { Role } from '@/types/enums'
+import { NotFoundPage } from '@/pages/NotFoundPage'
+import { DashboardPage } from '@/pages/owner/DashboardPage'
+import { FinancePage } from '@/pages/owner/FinancePage'
+import { CheckPage } from '@/pages/employee/CheckPage'
+import { EmployeeHome } from '@/pages/employee/EmployeeHome'
+import { LoginPage } from '@/pages/employee/LoginPage'
+import { ManagePage } from '@/pages/employee/ManagePage'
+import { OrderPage } from '@/pages/employee/OrderPage'
+import { OrdersPage } from '@/pages/employee/OrdersPage'
+import { RequestsPage } from '@/pages/employee/RequestsPage'
+import { TablesPage } from '@/pages/employee/TablesPage'
+import { UsersPage } from '@/pages/employee/UsersPage'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 export const router = createBrowserRouter([
-  { path: '/', element: <Navigate to="/staff" replace /> },
+  { path: '/', element: <Navigate to="/employee" replace /> },
 
   // ---------- ฝั่งลูกค้า: เข้าผ่าน QR ไม่ต้อง login ----------
   {
@@ -34,48 +38,70 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // ---------- ฝั่งพนักงาน: ต้อง login ----------
-  { path: '/staff/login', element: <LoginPage /> },
+  // ---------- ฝั่งพนักงาน: ต้อง login + เช็ค role ----------
+  { path: '/employee/login', element: <LoginPage /> },
   {
-    path: '/staff',
+    path: '/employee',
+    // ชั้นที่ 1: ต้องมี token ไม่งั้นเด้งไปหน้า login
     element: <ProtectedRoute />,
     children: [
       {
-        element: <StaffLayout />,
+        element: <EmployeeLayout />,
         children: [
-          { index: true, element: <StaffHome /> },
+          { index: true, element: <EmployeeHome /> },
+
+          // ชั้นที่ 2: เช็ค role ทีละหน้า ตรงกับ @Roles(...) ฝั่ง NestJS
           {
-            element: (
-              <ProtectedRoute roles={[Role.ADMIN, Role.WAITER, Role.CASHIER]} />
-            ),
-            children: [
-              { path: 'tables', element: <TablesPage /> },
-              { path: 'requests', element: <RequestsPage /> },
-            ],
+            element: <ProtectedRoute roles={pageRoles.order} />,
+            children: [{ path: 'order', element: <OrderPage /> }],
           },
           {
-            element: <ProtectedRoute roles={[Role.ADMIN, Role.WAITER]} />,
+            element: <ProtectedRoute roles={pageRoles.check} />,
+            children: [{ path: 'check', element: <CheckPage /> }],
+          },
+          {
+            element: <ProtectedRoute roles={pageRoles.manage} />,
+            children: [{ path: 'manage', element: <ManagePage /> }],
+          },
+
+          // หน้าที่ไม่มีในดีไซน์ แต่เขียนไว้แล้วและ backend รองรับ
+          // เข้าถึงได้ทาง URL ตรง แต่ไม่ได้อยู่ในแถบล่าง
+          {
+            element: <ProtectedRoute roles={pageRoles.orders} />,
             children: [{ path: 'orders', element: <OrdersPage /> }],
           },
           {
-            element: <ProtectedRoute roles={[Role.ADMIN, Role.KITCHEN]} />,
-            children: [{ path: 'kitchen', element: <KitchenPage /> }],
+            element: <ProtectedRoute roles={pageRoles.tables} />,
+            children: [{ path: 'tables', element: <TablesPage /> }],
           },
           {
-            element: <ProtectedRoute roles={[Role.ADMIN, Role.CASHIER]} />,
-            children: [{ path: 'cashier', element: <CashierPage /> }],
+            element: <ProtectedRoute roles={pageRoles.requests} />,
+            children: [{ path: 'requests', element: <RequestsPage /> }],
           },
           {
-            element: <ProtectedRoute roles={[Role.ADMIN]} />,
-            children: [
-              { path: 'menu', element: <MenuPage /> },
-              { path: 'users', element: <UsersPage /> },
-            ],
+            element: <ProtectedRoute roles={pageRoles.users} />,
+            children: [{ path: 'users', element: <UsersPage /> }],
           },
         ],
       },
     ],
   },
 
-  { path: '*', element: <Navigate to="/staff" replace /> },
+  // ---------- ฝั่งเจ้าของร้าน: ADMIN เท่านั้น ----------
+  {
+    path: '/owner',
+    element: <ProtectedRoute roles={pageRoles.owner} />,
+    children: [
+      {
+        element: <OwnerLayout />,
+        children: [
+          { index: true, element: <Navigate to="/owner/dashboard" replace /> },
+          { path: 'dashboard', element: <DashboardPage /> },
+          { path: 'finance', element: <FinancePage /> },
+        ],
+      },
+    ],
+  },
+
+  { path: '*', element: <NotFoundPage /> },
 ])

@@ -121,7 +121,7 @@ export function CustomerCartPage() {
         </button>
 
         {submit.isError && (
-          <p className="mt-2 px-2 text-sm text-white">
+          <p role="alert" className="mt-2 px-2 text-sm font-semibold text-white">
             {submit.error.message}
           </p>
         )}

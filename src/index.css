@@ -23,6 +23,18 @@
   --color-minus: #f44336;
   --color-plus: #4caf50;
 
+  /* ---- ฟอร์ม ---- */
+  --color-field: #fafafa;
+  --color-field-text: #1c1b1f;
+
+  /* ---- ตาราง (หน้า Check ฝั่งพนักงาน) ---- */
+  /* NOTE: ยังไม่ได้ยืนยันค่ากับ Figma (โควตา MCP หมด) — คาดจากภาพหน้าจอ */
+  --color-table-head: #1e73be;
+
+  /* ---- การ์ดสถิติ ฝั่งเจ้าของร้าน ---- */
+  /* NOTE: olive ยังไม่ได้ยืนยันกับ Figma (โควตา MCP หมด) — คาดจากภาพหน้าจอ */
+  --color-accent-olive: #b3b300;
+
   /* ---- สีบอกสถานะ ---- */
   --color-status-queue: #e05c5c;
   --color-status-cooking: #b36419;
