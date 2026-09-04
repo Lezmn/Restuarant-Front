@@ -107,7 +107,18 @@ export function EmployeeLayout() {
               {RESTAURANT_NAME}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* หน้าโต๊ะ/QR ไม่ได้อยู่ในแถบล่าง 4 ปุ่มตามดีไซน์ จึงวางทางเข้าไว้ที่ header */}
+            {user && pageRoles.tables.includes(user.role) && (
+              <Link
+                to="/employee/tables"
+                title="เปิดโต๊ะและสร้าง QR ให้ลูกค้า"
+                className="rounded-lg border-2 border-brand-400 px-3 py-2 text-sm font-bold text-brand-400 transition hover:bg-brand-50"
+              >
+                โต๊ะ / QR
+              </Link>
+            )}
+
             {/* ADMIN = เจ้าของร้าน มีหน้า Dashboard แยกอีกชุด */}
             {user?.role === Role.ADMIN && (
               <Link
