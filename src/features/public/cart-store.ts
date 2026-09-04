@@ -1,0 +1,87 @@
+import type { Id } from '@/types/models'
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+export interface CartOption {
+  id: Id
+  name: string
+  price: number
+}
+
+export interface CartLine {
+  /** key ของบรรทัดในตะกร้า — เมนูเดียวกันแต่คนละตัวเลือกถือเป็นคนละบรรทัด */
+  lineId: string
+  menuItemId: Id
+  name: string
+  imageUrl: string | null
+  basePrice: number
+  options: CartOption[]
+  quantity: number
+  note: string
+}
+
+interface CartState {
+  lines: CartLine[]
+  add: (line: Omit<CartLine, 'lineId'>) => void
+  setQuantity: (lineId: string, quantity: number) => void
+  remove: (lineId: string) => void
+  clear: () => void
+}
+
+const makeLineId = (menuItemId: Id, options: CartOption[], note: string) =>
+  [menuItemId, ...options.map((o) => o.id).sort(), note].join('|')
+
+export const lineUnitPrice = (line: CartLine) =>
+  line.basePrice + line.options.reduce((sum, o) => sum + o.price, 0)
+
+export const lineTotal = (line: CartLine) => lineUnitPrice(line) * line.quantity
+
+export const cartTotal = (lines: CartLine[]) =>
+  lines.reduce((sum, l) => sum + lineTotal(l), 0)
+
+export const cartCount = (lines: CartLine[]) =>
+  lines.reduce((n, l) => n + l.quantity, 0)
+
+// ตะกร้าเป็น client state จริง ๆ (ยังไม่มีใน backend จนกว่าจะกดส่งเข้าครัว)
+// จึงใช้ zustand + persist ไม่ใช่ TanStack Query
+export const useCart = create<CartState>()(
+  persist(
+    (set) => ({
+      lines: [],
+
+      add: (line) =>
+        set((state) => {
+          const lineId = makeLineId(line.menuItemId, line.options, line.note)
+          const existing = state.lines.find((l) => l.lineId === lineId)
+          if (existing) {
+            return {
+              lines: state.lines.map((l) =>
+                l.lineId === lineId
+                  ? { ...l, quantity: l.quantity + line.quantity }
+                  : l,
+              ),
+            }
+          }
+          return { lines: [...state.lines, { ...line, lineId }] }
+        }),
+
+      setQuantity: (lineId, quantity) =>
+        set((state) => ({
+          lines:
+            quantity <= 0
+              ? state.lines.filter((l) => l.lineId !== lineId)
+              : state.lines.map((l) =>
+                  l.lineId === lineId ? { ...l, quantity } : l,
+                ),
+        })),
+
+      remove: (lineId) =>
+        set((state) => ({
+          lines: state.lines.filter((l) => l.lineId !== lineId),
+        })),
+
+      clear: () => set({ lines: [] }),
+    }),
+    { name: 'restaurant.cart' },
+  ),
+)
