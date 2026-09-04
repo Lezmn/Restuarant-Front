@@ -29,6 +29,7 @@ const minutesAgo = (m: number) =>
 export const RESTAURANT_NAME = 'ร้านอาหารตามใจ ไม่ตามสั่ง'
 
 export const mockUsers: (User & { password: string })[] = [
+  { id: 'u-0', username: 'owner', password: '1234', name: 'เจ้าของร้าน', role: Role.ADMIN },
   { id: 'u-1', username: 'admin', password: '1234', name: 'ผู้จัดการร้าน', role: Role.ADMIN },
   { id: 'u-2', username: 'cashier', password: '1234', name: 'พนักงานแคชเชียร์', role: Role.CASHIER },
   { id: 'u-3', username: 'kitchen', password: '1234', name: 'ครัว', role: Role.KITCHEN },

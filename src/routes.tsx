@@ -3,17 +3,19 @@ import { EmployeeLayout } from '@/components/layout/EmployeeLayout'
 import { OwnerLayout } from '@/components/layout/OwnerLayout'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { pageRoles } from '@/features/auth/permissions'
+import { Role } from '@/types/enums'
 import { CustomerBillPage } from '@/pages/customer/BillPage'
 import { CustomerCartPage } from '@/pages/customer/CartPage'
 import { CustomerMenuItemPage } from '@/pages/customer/MenuItemPage'
 import { CustomerMenuPage } from '@/pages/customer/MenuPage'
 import { CustomerStatusPage } from '@/pages/customer/StatusPage'
+import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { DashboardPage } from '@/pages/owner/DashboardPage'
 import { FinancePage } from '@/pages/owner/FinancePage'
 import { CheckPage } from '@/pages/employee/CheckPage'
 import { EmployeeHome } from '@/pages/employee/EmployeeHome'
-import { LoginPage } from '@/pages/employee/LoginPage'
+
 import { ManagePage } from '@/pages/employee/ManagePage'
 import { OrderPage } from '@/pages/employee/OrderPage'
 import { OrdersPage } from '@/pages/employee/OrdersPage'
@@ -39,7 +41,17 @@ export const router = createBrowserRouter([
   },
 
   // ---------- ฝั่งพนักงาน: ต้อง login + เช็ค role ----------
-  { path: '/employee/login', element: <LoginPage /> },
+  {
+    path: '/employee/login',
+    element: (
+      <LoginPage
+        title="เข้าสู่ระบบ"
+        subtitle="สำหรับพนักงาน"
+        redirectTo="/employee"
+        hint="admin / cashier / kitchen / waiter"
+      />
+    ),
+  },
   {
     path: '/employee',
     // ชั้นที่ 1: ต้องมี token ไม่งั้นเด้งไปหน้า login
@@ -88,9 +100,28 @@ export const router = createBrowserRouter([
   },
 
   // ---------- ฝั่งเจ้าของร้าน: ADMIN เท่านั้น ----------
+  // ดีไซน์แยกหน้า login ของเจ้าของร้านออกจากพนักงาน (Desktop-16)
+  {
+    path: '/owner/login',
+    element: (
+      <LoginPage
+        title="ร้านอาหาร"
+        subtitle="สำหรับเจ้าของร้าน"
+        redirectTo="/owner/dashboard"
+        allowedRoles={[Role.ADMIN]}
+        hint="owner / admin"
+      />
+    ),
+  },
   {
     path: '/owner',
-    element: <ProtectedRoute roles={pageRoles.owner} />,
+    element: (
+      <ProtectedRoute
+        roles={pageRoles.owner}
+        loginPath="/owner/login"
+        fallbackPath="/owner/login"
+      />
+    ),
     children: [
       {
         element: <OwnerLayout />,
