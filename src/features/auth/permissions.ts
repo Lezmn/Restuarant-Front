@@ -13,7 +13,20 @@ import { Role } from '@/types/enums'
  * หมายเหตุ: นี่เป็นการกัน UI เท่านั้น ไม่ใช่ security จริง
  * ตัวจริงคือ JwtAuthGuard + RolesGuard ที่ backend
  */
-export const pageRoles = {
+type PageKey =
+  | 'order'
+  | 'check'
+  | 'manage'
+  | 'orders'
+  | 'tables'
+  | 'requests'
+  | 'users'
+  | 'openTable'
+  | 'owner'
+
+// ประกาศ type ตรง ๆ แทน satisfies เพราะ satisfies จะแคบค่าเป็น literal tuple
+// ทำให้ .includes(role) ฟ้อง error เวลา role เป็นตัวที่ไม่ได้อยู่ในลิสต์นั้น
+export const pageRoles: Record<PageKey, Role[]> = {
   order: [Role.ADMIN, Role.KITCHEN],
   check: [Role.ADMIN, Role.WAITER, Role.CASHIER],
   manage: [Role.ADMIN],
@@ -21,9 +34,11 @@ export const pageRoles = {
   tables: [Role.ADMIN, Role.WAITER, Role.CASHIER],
   requests: [Role.ADMIN, Role.WAITER, Role.CASHIER],
   users: [Role.ADMIN],
+  /** เปิดโต๊ะ/สร้าง QR — POST /table-sessions @Roles(ADMIN, WAITER) */
+  openTable: [Role.ADMIN, Role.WAITER],
   /** ฝั่งเจ้าของร้าน — backend ไม่มี role OWNER แยก ใช้ ADMIN แทน */
   owner: [Role.ADMIN],
-} satisfies Record<string, Role[]>
+}
 
 /** หน้าแรกหลัง login ของแต่ละ role — ต้องเป็นหน้าที่ role นั้นเข้าได้จริง ไม่งั้น redirect วนลูป */
 export const homeByRole: Record<Role, string> = {
