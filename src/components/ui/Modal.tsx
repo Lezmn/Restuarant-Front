@@ -11,10 +11,17 @@ export function Modal({
   children: ReactNode
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
+  // เก็บ onClose ไว้ใน ref เพื่อให้ effect ด้านล่างรันแค่ตอน mount
+  // ไม่งั้นพ่อที่ส่ง inline arrow มา (identity ใหม่ทุก render) จะทำให้ focus กระโดดกลับช่องแรก
+  // ทุกครั้งที่ข้อมูลใน dialog refetch (เช่น หลังเพิ่มตัวเลือกเมนู)
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onCloseRef.current()
     }
     document.addEventListener('keydown', onKey)
 
@@ -27,7 +34,7 @@ export function Modal({
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = previous
     }
-  }, [onClose])
+  }, [])
 
   return (
     <div
@@ -40,7 +47,7 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-lg border-2 border-gray-300 bg-white p-5 shadow-xl"
+        className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-lg border-2 border-gray-300 bg-white p-5 shadow-xl"
       >
         <h2 className="mb-4 text-center text-lg font-bold text-black">
           {title}

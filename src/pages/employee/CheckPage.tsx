@@ -68,8 +68,6 @@ export function CheckPage() {
   const [target, setTarget] = useState<PayTarget | null>(null)
   /** ใบเสร็จที่เพิ่งออก — เปิดให้พิมพ์ทันทีหลังรับเงิน */
   const [receipt, setReceipt] = useState<Payment | null>(null)
-  /** หมายเหตุที่พนักงานพิมพ์ตอนรับเงิน — backend ยังไม่มี field นี้ จึงติดไปกับใบเสร็จที่พิมพ์เท่านั้น */
-  const [receiptNote, setReceiptNote] = useState('')
 
   const openSessions = (sessions ?? []).filter(
     (s) => s.status === TableSessionStatus.OPEN,

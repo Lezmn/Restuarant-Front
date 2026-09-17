@@ -1,9 +1,10 @@
 import { ErrorNote } from '@/components/ui/ErrorNote'
 import { Modal } from '@/components/ui/Modal'
 import { useCategories } from '@/features/menu/hooks'
-import type { MenuItemInput } from '@/features/menu/api'
+import type { MenuItemInput, MenuOptionInput } from '@/features/menu/api'
 import type { MenuItem } from '@/types/models'
 import { useState } from 'react'
+import { MenuOptionsEditor, PendingOptionsEditor } from './MenuOptionsEditor'
 
 /** ฟอร์มเพิ่ม/แก้ไขเมนู — ใช้ตัวเดียวกันทั้งสองกรณี ต่างแค่ค่าเริ่มต้น */
 export function MenuFormDialog({
@@ -18,7 +19,8 @@ export function MenuFormDialog({
   isSaving: boolean
   error: unknown
   onCancel: () => void
-  onSubmit: (input: MenuItemInput) => void
+  /** โหมดเพิ่มเมนูใหม่จะได้ options ที่ผู้ใช้ใส่ไว้มาด้วย (โหมดแก้ไขยิง API ตรงจาก editor เอง) */
+  onSubmit: (input: MenuItemInput, pendingOptions: MenuOptionInput[]) => void
 }) {
   const { data: categories } = useCategories()
 
@@ -28,6 +30,7 @@ export function MenuFormDialog({
   const [imageUrl, setImageUrl] = useState(item?.imageUrl ?? '')
   const [categoryId, setCategoryId] = useState(item?.categoryId ?? '')
   const [isAvailable, setIsAvailable] = useState(item?.isAvailable ?? true)
+  const [pendingOptions, setPendingOptions] = useState<MenuOptionInput[]>([])
 
   return (
     <Modal
@@ -37,14 +40,17 @@ export function MenuFormDialog({
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          onSubmit({
-            name,
-            description: description.trim() || null,
-            price: Number(price),
-            imageUrl: imageUrl.trim() || null,
-            categoryId: categoryId || (categories?.[0]?.id ?? ''),
-            isAvailable,
-          })
+          onSubmit(
+            {
+              name,
+              description: description.trim() || null,
+              price: Number(price),
+              imageUrl: imageUrl.trim() || null,
+              categoryId: categoryId || (categories?.[0]?.id ?? ''),
+              isAvailable,
+            },
+            pendingOptions,
+          )
         }}
         className="space-y-3"
       >
@@ -119,6 +125,13 @@ export function MenuFormDialog({
           />
           <span className="font-semibold text-gray-700">พร้อมจำหน่าย</span>
         </label>
+
+        {/* โหมดแก้ไขยิง API ทันที; โหมดเพิ่มเมนูใหม่ยังไม่มี id จึงพักไว้ก่อนแล้วสร้างตามหลัง */}
+        {item ? (
+          <MenuOptionsEditor menuItemId={item.id} />
+        ) : (
+          <PendingOptionsEditor options={pendingOptions} onChange={setPendingOptions} />
+        )}
 
         <div className="grid grid-cols-2 gap-3 pt-2">
           <button

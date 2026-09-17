@@ -77,6 +77,7 @@ const mapMenuOption = (o: ApiMenuOption): MenuOption => ({
   id: o.id,
   name: o.name,
   price: o.price,
+  group: o.group ?? MenuOptionGroupKind.EXTRA,
   isAvailable: o.isAvailable,
 })
 

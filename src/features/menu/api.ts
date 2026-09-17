@@ -1,6 +1,7 @@
 import { apiClient } from '@/lib/api-client'
 import { mapMenuItem } from '@/lib/map'
 import type { ApiCategory, ApiMenuItem } from '@/types/api'
+import type { MenuOptionGroupKind } from '@/types/enums'
 import type { Category, Id, MenuItem } from '@/types/models'
 
 export async function getCategories(): Promise<Category[]> {
@@ -10,6 +11,15 @@ export async function getCategories(): Promise<Category[]> {
     name: c.name,
     sortOrder: c.sortOrder ?? index,
   }))
+}
+
+/** POST /categories @Roles(ADMIN) — ชื่อซ้ำ backend ตอบ 409 พร้อมข้อความ */
+export async function createCategory(name: string): Promise<Category> {
+  const data = await apiClient<ApiCategory>('/categories', {
+    method: 'POST',
+    body: JSON.stringify({ name: name.trim() }),
+  })
+  return { id: data.id, name: data.name, sortOrder: data.sortOrder ?? 0 }
 }
 
 export async function getMenuItems(): Promise<MenuItem[]> {
@@ -55,6 +65,51 @@ export async function updateMenuItem(vars: {
 /** DELETE /menu/:id @Roles(ADMIN) */
 export async function deleteMenuItem(id: Id): Promise<void> {
   await apiClient<void>(`/menu/${id}`, { method: 'DELETE' })
+}
+
+// ===== ตัวเลือกของเมนู (หมู/ไก่/ไข่ดาว) — ทุก endpoint ต้องเป็น ADMIN =====
+
+export interface MenuOptionInput {
+  name: string
+  price: number
+  group: MenuOptionGroupKind
+  isAvailable: boolean
+}
+
+/** POST /menu/:id/options — เพิ่มตัวเลือกให้เมนู */
+export async function createMenuOption(vars: {
+  menuItemId: Id
+  input: MenuOptionInput
+}): Promise<void> {
+  await apiClient(`/menu/${vars.menuItemId}/options`, {
+    method: 'POST',
+    body: JSON.stringify(vars.input),
+  })
+}
+
+/** PATCH /menu/:id/options/:optionId — แก้ชื่อ/ราคา/กลุ่ม หรือเปิด-ปิดให้เลือก */
+export async function updateMenuOption(vars: {
+  menuItemId: Id
+  optionId: Id
+  input: Partial<MenuOptionInput>
+}): Promise<void> {
+  await apiClient(`/menu/${vars.menuItemId}/options/${vars.optionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(vars.input),
+  })
+}
+
+/**
+ * DELETE /menu/:id/options/:optionId
+ * backend ตอบ 400 ถ้าตัวเลือกเคยถูกสั่งไปแล้ว (ต้องเก็บไว้ให้ใบเสร็จเก่าอ้างถึงได้) — ให้ปิดแทน
+ */
+export async function deleteMenuOption(vars: {
+  menuItemId: Id
+  optionId: Id
+}): Promise<void> {
+  await apiClient(`/menu/${vars.menuItemId}/options/${vars.optionId}`, {
+    method: 'DELETE',
+  })
 }
 
 /** เปิด/ปิดการขาย — ใช้ PATCH ตัวเดียวกับการแก้ไขเมนู */

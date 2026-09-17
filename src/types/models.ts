@@ -1,4 +1,5 @@
 import type {
+  MenuOptionGroupKind,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
@@ -29,6 +30,8 @@ export interface MenuOption {
   id: Id
   name: string
   price: number
+  /** PROTEIN / EXTRA — หน้าจัดการใช้แสดง/แก้กลุ่ม ส่วนหน้าลูกค้าใช้ optionGroups ที่จับกลุ่มแล้ว */
+  group: MenuOptionGroupKind
   isAvailable: boolean
 }
 

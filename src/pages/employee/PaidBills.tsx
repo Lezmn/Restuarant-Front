@@ -96,6 +96,15 @@ export function PaidBills() {
                   </td>
                   <td className="px-4 py-3 text-sm tabular-nums">
                     {p.receipt?.number ?? '-'}
+                    {/* หมายเหตุตอนรับเงิน เก็บใน DB แล้ว เปิดดูย้อนหลังได้ */}
+                    {p.note && (
+                      <span
+                        className="block max-w-48 truncate text-xs font-normal text-gray-500"
+                        title={p.note}
+                      >
+                        {p.note}
+                      </span>
+                    )}
                   </td>
                   <td
                     className={`px-4 py-3 text-sm font-semibold ${
