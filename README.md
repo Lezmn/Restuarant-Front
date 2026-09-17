@@ -2,8 +2,8 @@
 
 หน้าบ้านของระบบจัดการร้านอาหาร — ใช้คู่กับ API ในโปรเจกต์ `restaurant-app` (NestJS + Prisma + PostgreSQL)
 
-> **สถานะปัจจุบัน: ยังรันบนข้อมูลจำลอง (mock) ทั้งหมด** ยังไม่ได้ต่อกับ API จริง
-> ดูวิธีสลับที่หัวข้อ [ต่อกับ backend จริง](#ต่อกับ-backend-จริง)
+> **สถานะปัจจุบัน: ต่อกับ API จริงครบทุกหน้าแล้ว** ไม่มีข้อมูลจำลองเหลืออยู่
+> วิธีรันดูที่หัวข้อ [ต่อกับ backend จริง](#ต่อกับ-backend-จริง)
 
 ---
 
@@ -83,16 +83,17 @@ npm run dev
 
 > backend ไม่มี role `OWNER` แยก จึงใช้ `ADMIN` ไปก่อน
 
-### บัญชีทดลอง (mock)
+### บัญชีทดลอง (จาก `prisma/seed.ts` ฝั่ง backend)
 
-รหัสผ่าน **`1234`** ทุกบัญชี
+รหัสผ่าน **`ChangeMe123!`** ทุกบัญชี — หน้า login กรอกแค่ชื่อผู้ใช้ ระบบเติม `@restaurant.local` ให้เอง
+(ตั้งโดเมนได้ที่ `VITE_LOGIN_EMAIL_DOMAIN`; พิมพ์อีเมลเต็มก็ได้)
 
-| username | role | ไปหน้าแรกที่ |
-|---|---|---|
-| `admin` | ADMIN | `/employee/order` (+ เข้า `/owner` ได้) |
-| `kitchen` | KITCHEN | `/employee/order` |
-| `cashier` | CASHIER | `/employee/check` |
-| `waiter` | WAITER | `/employee/check` |
+| ผู้ใช้ | role |
+|---|---|
+| `admin` | ADMIN (+ เข้า `/owner` ได้) |
+| `kitchen` | KITCHEN |
+| `cashier` | STAFF |
+| `waiter` | STAFF |
 
 ---
 
@@ -107,10 +108,10 @@ src/
 │   ├── auth-storage.ts   เก็บ token/user ใน localStorage
 │   ├── format.ts         formatBaht / formatTime
 │   ├── query-client.ts   ตั้งค่า TanStack Query
-│   └── mock/             ← ข้อมูลจำลอง ลบทิ้งได้ตอนต่อ API จริง
+│   └── map.ts            แปลง response ดิบ (types/api.ts) เป็น type ของหน้าจอ (types/models.ts)
 ├── features/         จับคู่ 1:1 กับ module ฝั่ง NestJS
 │   └── <feature>/
-│       ├── api.ts        เรียก endpoint (ตอนนี้อ่านจาก mock)
+│       ├── api.ts        เรียก endpoint ผ่าน apiClient
 │       └── hooks.ts      useQuery / useMutation
 ├── components/
 │   ├── ui/               Badge, Card, StatCard, FoodImage, TrendChart, ...
@@ -122,7 +123,7 @@ src/
 ```
 
 **กติกาสำคัญ:** component ห้ามเรียก `fetch` เอง ต้องผ่าน `features/*/api.ts` เสมอ
-เวลาสลับจาก mock ไป API จริงจะได้แก้ที่เดียว ไม่ต้องแตะหน้าจอ
+และรูปร่าง response ของ backend ให้แปลงที่ `lib/map.ts` ที่เดียว ไม่ให้รั่วเข้าหน้าจอ
 
 ---
 
@@ -168,21 +169,10 @@ src/
    VITE_API_URL=http://localhost:3000
    ```
 
-3. แก้ `features/*/api.ts` ให้เรียก `apiClient()` แทนการอ่านจาก `lib/mock/`
+3. `npm run dev` แล้วเปิด `http://localhost:5173`
 
-   ```ts
-   // ก่อน
-   export async function getMenuItems() { await delay(); return mockMenuItems }
-
-   // หลัง
-   export async function getMenuItems() {
-     return apiClient<MenuItem[]>('/public/menu')
-   }
-   ```
-
-4. ลบโฟลเดอร์ `lib/mock/` ทิ้ง
-
-**`hooks.ts` และหน้าจอทั้งหมดไม่ต้องแก้เลย**
+> image ของ `restaurant_api` ใน docker คัดลอก `prisma/` ตอน build (mount แค่ `src/`)
+> ถ้า schema/migration ฝั่ง backend เปลี่ยน ต้อง `docker compose up -d --build app` ไม่งั้น Nest จะ compile ไม่ผ่าน
 
 ฝั่ง backend เตรียมไว้ให้แล้ว 2 อย่าง:
 - `app.enableCors()` — ตั้ง origin ผ่าน env `CORS_ORIGIN`
@@ -196,17 +186,15 @@ src/
 
 | หน้า / ฟีเจอร์ | ต้องมีอะไรก่อน |
 |---|---|
-| ตัวเลือกเมนูแบบ radio / checkbox | `MenuOptionGroup` model (ตอนนี้ `MenuOption` เป็น flat list) |
 | แท็บ "วัตถุดิบ" ใน Manage | Ingredient model |
-| Dashboard เจ้าของร้าน | reports module |
-| รายรับ-รายจ่าย | Expense model + expenses module |
+| "ลูกค้าเข้าใช้บริการ" บน Dashboard | backend ไม่ได้นับหัวลูกค้า — ตอนนี้แสดง "รายจ่ายวันนี้" แทน |
+| หมายเหตุแคชเชียร์บนใบเสร็จ | field ใน Payment/Receipt (ตอนนี้พิมพ์ลงกระดาษอย่างเดียว) |
 
 **ยังไม่ได้ทำ**
 
 - หน้า Cashier / Users ยังเป็น placeholder
 - **ไม่มีหน้าสร้าง QR code ให้โต๊ะ** — พนักงานยังไม่มีทางส่งลิงก์ `/t/:token` ให้ลูกค้า
 - ETA "10-15 นาที" ยัง hardcode
-- โต๊ะถูกปิดบิลแล้ว หน้าลูกค้ายังสั่งต่อได้
 - ยังไม่มี test และ Prettier
 
 **เรื่องเงิน**

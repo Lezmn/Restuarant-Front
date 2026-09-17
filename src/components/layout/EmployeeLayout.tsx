@@ -1,7 +1,9 @@
+import { CallStaffAlert } from '@/components/CallStaffAlert'
 import { pageRoles } from '@/features/auth/permissions'
 import { useAuth } from '@/features/auth/use-auth'
+import { useStaffLiveEvents } from '@/features/live/hooks'
 import { useTables } from '@/features/tables/hooks'
-import { RESTAURANT_NAME } from '@/lib/mock/db'
+import { RESTAURANT_NAME } from '@/lib/config'
 import { Role, TableStatus } from '@/types/enums'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
@@ -88,6 +90,8 @@ export function EmployeeLayout() {
   const signOut = useAuth((s) => s.signOut)
   const navigate = useNavigate()
   const { data: tables } = useTables()
+  // ต่อ socket ที่ layout จึงได้ event ทุกหน้าของพนักงาน (ครัว / Check / โต๊ะ / คำขอ)
+  useStaffLiveEvents()
 
   const available =
     tables?.filter((t) => t.status === TableStatus.AVAILABLE).length ?? 0
@@ -145,6 +149,8 @@ export function EmployeeLayout() {
       <main className="flex-1 px-4 pt-4 pb-28 sm:px-8">
         <Outlet />
       </main>
+
+      <CallStaffAlert />
 
       {/* แถบล่าง 4 ปุ่มตามดีไซน์ — active เป็นบล็อกส้มเต็ม */}
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)]">

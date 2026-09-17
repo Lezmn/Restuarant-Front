@@ -70,11 +70,15 @@ export function LoginPage({
         </div>
 
         <label className="block text-sm font-semibold text-gray-700">
-          ชื่อผู้ใช้
+          ผู้ใช้
           <input
+            type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            required
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-300"
           />
         </label>
@@ -111,7 +115,7 @@ export function LoginPage({
         </button>
 
         <p className="mt-4 rounded-lg bg-brand-50 p-3 text-xs text-gray-600">
-          ยังไม่ได้ต่อ backend — ใช้บัญชีจำลอง รหัสผ่าน <b>1234</b>
+          บัญชีตัวอย่างจาก seed — รหัสผ่าน <b>ChangeMe123!</b>
           <br />
           {hint}
         </p>

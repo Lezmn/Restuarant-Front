@@ -11,8 +11,9 @@ import {
 import { useTables } from '@/features/tables/hooks'
 import { TableSessionStatus, TableStatus } from '@/types/enums'
 import type { RestaurantTable, TableSession } from '@/types/models'
-import { RESTAURANT_NAME } from '@/lib/mock/db'
+import { RESTAURANT_NAME } from '@/lib/config'
 import { QRCodeSVG } from 'qrcode.react'
+import { TakeOrderDialog } from './TakeOrderDialog'
 import { useState } from 'react'
 
 const statusTone: Record<string, BadgeTone> = {
@@ -37,8 +38,9 @@ export function TablesPage() {
   const openSession = useOpenSession()
   const closeSession = useCloseSession()
   const [qrTarget, setQrTarget] = useState<TableSession | null>(null)
+  const [orderTarget, setOrderTarget] = useState<TableSession | null>(null)
 
-  // เปิดโต๊ะได้เฉพาะ ADMIN/WAITER ตาม @Roles ของ POST /table-sessions
+  // เปิดโต๊ะได้เฉพาะ ADMIN/STAFF ตาม @Roles ของ POST /table-sessions
   const canOpen = Boolean(user && pageRoles.openTable.includes(user.role))
 
   const openSessionOf = (table: RestaurantTable) =>
@@ -90,9 +92,17 @@ export function TablesPage() {
 
                   <button
                     type="button"
+                    onClick={() => setOrderTarget(session)}
+                    className="mt-3 w-full rounded-lg bg-brand-300 py-2 text-sm font-bold text-white transition hover:bg-brand-400"
+                  >
+                    รับออเดอร์แทนลูกค้า
+                  </button>
+
+                  <button
+                    type="button"
                     disabled={closeSession.isPending}
                     onClick={() => closeSession.mutate(session.id)}
-                    className="mt-3 w-full rounded-lg border-2 border-danger py-2 text-sm font-bold text-danger transition hover:bg-danger/10 disabled:opacity-60"
+                    className="mt-2 w-full rounded-lg border-2 border-danger py-2 text-sm font-bold text-danger transition hover:bg-danger/10 disabled:opacity-60"
                   >
                     ปิดโต๊ะ
                   </button>
@@ -101,7 +111,7 @@ export function TablesPage() {
                 <button
                   type="button"
                   disabled={!canOpen || openSession.isPending}
-                  title={canOpen ? undefined : 'ต้องเป็น ADMIN หรือ WAITER'}
+                  title={canOpen ? undefined : 'ต้องเป็น ADMIN หรือ STAFF'}
                   onClick={() =>
                     openSession.mutate(table.id, {
                       // เปิดโต๊ะเสร็จเด้ง QR ขึ้นมาเลย จะได้กดพิมพ์ต่อได้ทันที
@@ -120,6 +130,13 @@ export function TablesPage() {
 
       {qrTarget && (
         <QrDialog session={qrTarget} onClose={() => setQrTarget(null)} />
+      )}
+
+      {orderTarget && (
+        <TakeOrderDialog
+          session={orderTarget}
+          onClose={() => setOrderTarget(null)}
+        />
       )}
     </div>
   )

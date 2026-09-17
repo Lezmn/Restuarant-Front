@@ -1,8 +1,7 @@
 import { authStorage } from './auth-storage'
 
-// ยังไม่ได้เชื่อมกับ backend — ไฟล์นี้เตรียมไว้สำหรับตอนต่อจริง
-// วิธีเปิดใช้: ตั้ง VITE_API_URL ใน .env แล้วแก้ features/*/api.ts
-// ให้เรียก apiClient แทนการอ่านจาก lib/mock/db.ts
+// fetch wrapper ตัวเดียวของทั้งแอป — features/*/api.ts ต้องเรียกผ่านตัวนี้เสมอ
+// ตั้ง URL ของ API ผ่าน VITE_API_URL ใน .env
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 export class ApiError extends Error {

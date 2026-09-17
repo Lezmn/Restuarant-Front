@@ -1,10 +1,17 @@
 import type { Id } from '@/types/models'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  createCategory,
+  createMenuItem,
+  createMenuOption,
+  deleteMenuItem,
+  deleteMenuOption,
   getCategories,
   getMenuItem,
   getMenuItems,
   setMenuItemAvailability,
+  updateMenuItem,
+  updateMenuOption,
 } from './api'
 
 export const menuKeys = {
@@ -26,6 +33,19 @@ export const useMenuItem = (id: Id | undefined) =>
     enabled: Boolean(id),
   })
 
+/** หมวดใหม่ต้องโผล่ทั้งฝั่งจัดการและหน้าลูกค้า (/public/menu จัดกลุ่มตามหมวด) */
+export function useCreateCategory() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: createCategory,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: menuKeys.categories })
+      qc.invalidateQueries({ queryKey: ['public', 'menu'] })
+      qc.invalidateQueries({ queryKey: ['public', 'categories'] })
+    },
+  })
+}
+
 export function useSetMenuItemAvailability() {
   const qc = useQueryClient()
   return useMutation({
@@ -33,3 +53,37 @@ export function useSetMenuItemAvailability() {
     onSuccess: () => qc.invalidateQueries({ queryKey: menuKeys.items }),
   })
 }
+
+function useMenuMutation<TVars, TData>(fn: (vars: TVars) => Promise<TData>) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => qc.invalidateQueries({ queryKey: menuKeys.items }),
+  })
+}
+
+export const useCreateMenuItem = () => useMenuMutation(createMenuItem)
+export const useUpdateMenuItem = () => useMenuMutation(updateMenuItem)
+export const useDeleteMenuItem = () => useMenuMutation(deleteMenuItem)
+
+/**
+ * ตัวเลือกเปลี่ยน → ต้อง refetch ทั้งรายการเมนู, เมนูตัวที่เปิดแก้อยู่ (dialog ใช้ useMenuItem)
+ * และ /public/menu เพราะลูกค้าเห็นเฉพาะตัวเลือกที่ isAvailable
+ */
+function useMenuOptionMutation<TVars>(
+  fn: (vars: TVars & { menuItemId: Id }) => Promise<void>,
+) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: menuKeys.items })
+      qc.invalidateQueries({ queryKey: menuKeys.item(vars.menuItemId) })
+      qc.invalidateQueries({ queryKey: ['public', 'menu'] })
+    },
+  })
+}
+
+export const useCreateMenuOption = () => useMenuOptionMutation(createMenuOption)
+export const useUpdateMenuOption = () => useMenuOptionMutation(updateMenuOption)
+export const useDeleteMenuOption = () => useMenuOptionMutation(deleteMenuOption)

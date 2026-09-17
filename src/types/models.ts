@@ -1,6 +1,8 @@
 import type {
+  MenuOptionGroupKind,
   OrderStatus,
   PaymentMethod,
+  PaymentStatus,
   Role,
   ServiceRequestStatus,
   ServiceRequestType,
@@ -13,7 +15,7 @@ export type Id = string
 
 export interface User {
   id: Id
-  username: string
+  email: string
   name: string
   role: Role
 }
@@ -28,13 +30,14 @@ export interface MenuOption {
   id: Id
   name: string
   price: number
+  /** PROTEIN / EXTRA — หน้าจัดการใช้แสดง/แก้กลุ่ม ส่วนหน้าลูกค้าใช้ optionGroups ที่จับกลุ่มแล้ว */
+  group: MenuOptionGroupKind
   isAvailable: boolean
 }
 
-// ดีไซน์แยกตัวเลือกเป็น 2 แบบ: "เนื้อสัตว์" เลือกได้อันเดียว (radio)
-// กับ "เพิ่มเติม" เลือกได้หลายอัน (checkbox)
-// แต่ MenuOption ใน backend เป็น flat list ยังไม่มีฟิลด์กลุ่ม/ชนิดการเลือก
-// จึงจัดกลุ่มไว้ฝั่ง frontend ก่อน — ต้องเพิ่มใน schema ตอนต่อ API จริง
+// ตัวเลือกแยกเป็น 2 แบบ: "เนื้อสัตว์" (group=PROTEIN) เลือกได้อันเดียว (radio)
+// กับ "เพิ่มเติม" (group=EXTRA) เลือกได้หลายอัน (checkbox)
+// backend ส่ง MenuOption มาเป็น flat list พร้อมฟิลด์ group — จับกลุ่มที่ lib/map.ts
 export interface MenuOptionGroup {
   id: Id
   name: string
@@ -69,6 +72,8 @@ export interface TableSession {
   status: TableSessionStatus
   openedAt: string
   closedAt: string | null
+  /** ยอดที่ต้องจ่ายของโต๊ะนี้ — backend คำนวณมาให้ ไม่ได้บวกเองฝั่ง frontend */
+  total: number
 }
 
 export interface OrderItem {
@@ -80,11 +85,14 @@ export interface OrderItem {
   unitPrice: number
   note: string | null
   optionNames: string[]
+  /** ราคาตัวเลือกที่บวกเพิ่มต่อ 1 จาน (backend คิด (unitPrice + optionsTotal) * quantity) */
+  optionsTotal: number
 }
 
 export interface Order {
   id: Id
-  orderNumber: number
+  /** backend ไม่มีเลขที่ออเดอร์ — ใช้ 6 ตัวแรกของ uuid แสดงแทนให้พนักงานอ้างอิงกันได้ */
+  orderRef: string
   tableSessionId: Id
   tableName: string
   status: OrderStatus
@@ -92,12 +100,42 @@ export interface Order {
   items: OrderItem[]
 }
 
+export interface ReceiptItem {
+  id: Id
+  name: string
+  quantity: number
+  unitPrice: number
+  optionTotal: number
+  lineTotal: number
+  note: string | null
+}
+
+export interface Receipt {
+  id: Id
+  number: string
+  subtotal: number
+  discount: number
+  total: number
+  issuedAt: string
+  tableName: string
+  /** หมายเหตุท้ายใบเสร็จ — เก็บใน DB แล้ว เปิดดูย้อนหลังก็ยังอยู่ */
+  note: string | null
+  items: ReceiptItem[]
+}
+
 export interface Payment {
   id: Id
   tableSessionId: Id
+  tableName: string
   method: PaymentMethod
+  status: PaymentStatus
   amount: number
   paidAt: string
+  /** ถ้าบิลถูกยกเลิก — เวลาและเหตุผลที่พนักงานกรอก */
+  voidedAt: string | null
+  voidReason: string | null
+  note: string | null
+  receipt: Receipt | null
 }
 
 export interface ServiceRequest {

@@ -1,19 +1,12 @@
 import { useOrders, useUpdateOrderStatus } from '@/features/orders/hooks'
 import { ErrorNote } from '@/components/ui/ErrorNote'
-import {
-  useResolveServiceRequest,
-  useServiceRequests,
-} from '@/features/service-requests/hooks'
-import {
-  OrderStatus,
-  ServiceRequestStatus,
-  ServiceRequestType,
-} from '@/types/enums'
+import { LIVE_POLL_MS } from '@/lib/live'
+import { OrderStatus } from '@/types/enums'
 import type { Id, Order } from '@/types/models'
 import { useState } from 'react'
 
 // ยังไม่มี WebSocket ฝั่ง backend — ใช้ polling ไปก่อน
-const POLL_MS = 5_000
+const POLL_MS = LIVE_POLL_MS
 
 const waitedMinutes = (iso: string) =>
   Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000))
@@ -64,20 +57,12 @@ const columns: {
 
 export function OrderPage() {
   const { data: orders, isPending } = useOrders({ refetchInterval: POLL_MS })
-  const { data: requests } = useServiceRequests({ refetchInterval: POLL_MS })
   const updateStatus = useUpdateOrderStatus()
-  const resolveRequest = useResolveServiceRequest()
 
   // backend ยังไม่มีสถานะ "เคลียร์ออกจากบอร์ด" — เก็บไว้ในหน้าจอก่อน
   const [cleared, setCleared] = useState<Id[]>([])
   // ติ๊กรายอาหารว่าทำแล้ว — เป็นตัวช่วยของครัว ไม่ได้ส่งขึ้น backend
   const [checked, setChecked] = useState<Record<string, boolean>>({})
-
-  const callStaffRequest = requests?.find(
-    (r) =>
-      r.type === ServiceRequestType.CALL_STAFF &&
-      r.status === ServiceRequestStatus.PENDING,
-  )
 
   const visible = (orders ?? []).filter((o) => !cleared.includes(o.id))
 
@@ -93,7 +78,7 @@ export function OrderPage() {
 
   return (
     <div className="relative">
-      <ErrorNote error={updateStatus.error ?? resolveRequest.error} />
+      <ErrorNote error={updateStatus.error} />
 
       {isPending && <p className="text-sm text-gray-500">กำลังโหลด...</p>}
 
@@ -138,7 +123,7 @@ export function OrderPage() {
                       </p>
                     </div>
                     <p className="text-sm font-semibold text-gray-700">
-                      ออเดอร์ #{order.orderNumber}
+                      ออเดอร์ #{order.orderRef}
                     </p>
 
                     <ul className="mt-2 space-y-2">
@@ -195,6 +180,26 @@ export function OrderPage() {
                     >
                       {column.buttonLabel}
                     </button>
+
+                    <button
+                      type="button"
+                      disabled={updateStatus.isPending}
+                      onClick={() => {
+                        if (
+                          confirm(
+                            `ยกเลิกออเดอร์ #${order.orderRef} โต๊ะ ${order.tableName} ?`,
+                          )
+                        ) {
+                          updateStatus.mutate({
+                            id: order.id,
+                            status: OrderStatus.CANCELLED,
+                          })
+                        }
+                      }}
+                      className="mt-2 w-full rounded-lg border border-gray-300 py-2 text-xs font-semibold text-gray-600 transition hover:border-danger hover:text-danger disabled:opacity-60"
+                    >
+                      ยกเลิกออเดอร์
+                    </button>
                   </article>
                 ))}
               </div>
@@ -203,35 +208,6 @@ export function OrderPage() {
         })}
       </div>
 
-      {/* แจ้งเตือนเรียกพนักงาน — ดีไซน์เป็นกล่องลอยทับกลางจอ */}
-      {callStaffRequest && (
-        <div
-          role="alert"
-          className="fixed inset-x-4 bottom-28 z-30 mx-auto max-w-2xl rounded-xl border border-gray-200 bg-white p-5 shadow-xl"
-        >
-          <button
-            type="button"
-            aria-label="ปิด"
-            onClick={() => resolveRequest.mutate(callStaffRequest.id)}
-            className="absolute top-3 right-4 text-2xl leading-none text-gray-500 hover:text-black"
-          >
-            ×
-          </button>
-
-          <div className="text-center">
-            <span aria-hidden className="text-2xl text-brand-300">
-              ⚠
-            </span>
-            <p className="mt-1 text-lg font-bold text-black">
-              มีการเรียกพนักงาน
-            </p>
-            <p className="text-sm text-gray-600">
-              ลูกค้าที่โต๊ะ {callStaffRequest.tableName} ได้ส่งคำขอเรียกพนักงาน
-              {callStaffRequest.note && ` — ${callStaffRequest.note}`}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

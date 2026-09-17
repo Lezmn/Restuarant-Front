@@ -1,6 +1,17 @@
 import { FoodImage } from '@/components/ui/FoodImage'
 import { ErrorNote } from '@/components/ui/ErrorNote'
-import { useMenuItems, useSetMenuItemAvailability } from '@/features/menu/hooks'
+import {
+  useCategories,
+  useCreateCategory,
+  useCreateMenuItem,
+  useCreateMenuOption,
+  useDeleteMenuItem,
+  useMenuItems,
+  useSetMenuItemAvailability,
+  useUpdateMenuItem,
+} from '@/features/menu/hooks'
+import type { MenuItem } from '@/types/models'
+import { MenuFormDialog } from './MenuFormDialog'
 import { formatBaht } from '@/lib/format'
 import { useMemo, useState } from 'react'
 
@@ -8,22 +19,55 @@ type Tab = 'menu' | 'ingredient'
 
 export function ManagePage() {
   const { data: items, isPending } = useMenuItems()
+  const { data: categories } = useCategories()
   const setAvailability = useSetMenuItemAvailability()
+  const createItem = useCreateMenuItem()
+  const createOption = useCreateMenuOption()
+  const updateItem = useUpdateMenuItem()
+  const deleteItem = useDeleteMenuItem()
+  const createCategory = useCreateCategory()
+
   const [tab, setTab] = useState<Tab>('menu')
   const [search, setSearch] = useState('')
+  /** '' = ทุกหมวด */
+  const [categoryId, setCategoryId] = useState('')
+  /** เปิดการ์ดกรอกชื่อหมวดใหม่ */
+  const [addingCategory, setAddingCategory] = useState(false)
+  /** null = ปิดฟอร์ม, 'new' = เพิ่มใหม่, object = แก้ไขเมนูนั้น */
+  const [editing, setEditing] = useState<MenuItem | 'new' | null>(null)
 
   const visible = useMemo(() => {
     const keyword = search.trim().toLowerCase()
-    if (!keyword) return items ?? []
-    return (items ?? []).filter((i) => i.name.toLowerCase().includes(keyword))
-  }, [items, search])
+    return (items ?? []).filter(
+      (i) =>
+        (!categoryId || i.categoryId === categoryId) &&
+        (!keyword || i.name.toLowerCase().includes(keyword)),
+    )
+  }, [items, search, categoryId])
+
+  /** จำนวนเมนูต่อหมวด ไว้โชว์ท้ายชื่อชิป */
+  const countByCategory = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const i of items ?? []) {
+      counts.set(i.categoryId, (counts.get(i.categoryId) ?? 0) + 1)
+    }
+    return counts
+  }, [items])
 
   return (
     <div>
-      <ErrorNote error={setAvailability.error} />
+      <ErrorNote error={setAvailability.error ?? deleteItem.error} />
 
       {/* แถบเครื่องมือ: toggle เมนู/วัตถุดิบ + ค้นหา */}
-      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
+      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3 sm:flex-row sm:items-center sm:gap-4">
+        <button
+          type="button"
+          onClick={() => setEditing('new')}
+          className="rounded-full bg-brand-300 px-5 py-2 text-sm font-bold text-white transition hover:bg-brand-400 sm:mr-auto"
+        >
+          + เพิ่มเมนู
+        </button>
+
         <div className="flex gap-2">
           <TabButton active={tab === 'menu'} onClick={() => setTab('menu')}>
             เมนู
@@ -59,6 +103,51 @@ export function ManagePage() {
         </label>
       </div>
 
+      {/* แถบหมวดหมู่ — กดเพื่อกรองเมนูในตาราง ใช้ร่วมกับช่องค้นหาได้ */}
+      {tab === 'menu' && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Chip active={categoryId === ''} onClick={() => setCategoryId('')}>
+            {`ทั้งหมด (${items?.length ?? 0})`}
+          </Chip>
+          {categories?.map((c) => (
+            <Chip
+              key={c.id}
+              active={categoryId === c.id}
+              onClick={() => setCategoryId(c.id)}
+            >
+              {`${c.name} (${countByCategory.get(c.id) ?? 0})`}
+            </Chip>
+          ))}
+          <button
+            type="button"
+            onClick={() => setAddingCategory(true)}
+            className="rounded-full border-2 border-dashed border-brand-300 px-4 py-1 text-sm font-bold text-brand-400 transition hover:bg-brand-50"
+          >
+            + เพิ่มหมวดหมู่
+          </button>
+        </div>
+      )}
+
+      {tab === 'menu' && addingCategory && (
+        <NewCategoryCard
+          isSaving={createCategory.isPending}
+          error={createCategory.error}
+          onCancel={() => {
+            createCategory.reset()
+            setAddingCategory(false)
+          }}
+          onSubmit={(name) =>
+            createCategory.mutate(name, {
+              // เพิ่มเสร็จให้กรองไปที่หมวดใหม่เลย จะได้เห็นว่าเพิ่มเมนูเข้าหมวดนี้ได้ทันที
+              onSuccess: (created) => {
+                setCategoryId(created.id)
+                setAddingCategory(false)
+              },
+            })
+          }
+        />
+      )}
+
       {tab === 'ingredient' ? (
         <div className="mt-6 rounded-xl border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500">
           ยังทำไม่ได้ — backend ยังไม่มี model วัตถุดิบ
@@ -73,7 +162,9 @@ export function ManagePage() {
 
           {!isPending && visible.length === 0 && (
             <p className="mt-10 text-center text-sm text-gray-500">
-              ไม่พบเมนูที่ค้นหา
+              {categoryId && !search.trim()
+                ? 'หมวดนี้ยังไม่มีเมนู — กด "+ เพิ่มเมนู" แล้วเลือกหมวดนี้ได้เลย'
+                : 'ไม่พบเมนูที่ค้นหา'}
             </p>
           )}
 
@@ -121,13 +212,150 @@ export function ManagePage() {
                       }
                     />
                   </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-200 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(item)}
+                      className="rounded-lg border-2 border-brand-300 py-1.5 text-xs font-bold text-brand-400 transition hover:bg-brand-50"
+                    >
+                      แก้ไข
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deleteItem.isPending}
+                      onClick={() => {
+                        if (confirm(`ลบเมนู "${item.name}" ?`)) {
+                          deleteItem.mutate(item.id)
+                        }
+                      }}
+                      className="rounded-lg border-2 border-danger py-1.5 text-xs font-bold text-danger transition hover:bg-danger/10 disabled:opacity-60"
+                    >
+                      ลบ
+                    </button>
+                  </div>
                 </div>
               </article>
             ))}
           </div>
         </>
       )}
+
+      {editing === 'new' && (
+        <MenuFormDialog
+          isSaving={createItem.isPending}
+          error={createItem.error}
+          onCancel={() => setEditing(null)}
+          onSubmit={(input, pendingOptions) =>
+            createItem.mutate(input, {
+              onSuccess: async (created) => {
+                // ตัวเลือกต้องมี id เมนูก่อน จึงสร้างต่อจากเมนูทีละตัวตามลำดับที่ผู้ใช้ใส่
+                for (const option of pendingOptions) {
+                  await createOption.mutateAsync({ menuItemId: created.id, input: option })
+                }
+                setEditing(null)
+              },
+            })
+          }
+        />
+      )}
+
+      {editing && editing !== 'new' && (
+        <MenuFormDialog
+          item={editing}
+          isSaving={updateItem.isPending}
+          error={updateItem.error}
+          onCancel={() => setEditing(null)}
+          onSubmit={(input) =>
+            updateItem.mutate(
+              { id: editing.id, input },
+              { onSuccess: () => setEditing(null) },
+            )
+          }
+        />
+      )}
     </div>
+  )
+}
+
+/** การ์ดกรอกชื่อหมวดใหม่ — โผล่ใต้แถบชิป ไม่ใช้ Modal เพราะกรอกแค่ช่องเดียว */
+function NewCategoryCard({
+  isSaving,
+  error,
+  onCancel,
+  onSubmit,
+}: {
+  isSaving: boolean
+  error: unknown
+  onCancel: () => void
+  onSubmit: (name: string) => void
+}) {
+  const [name, setName] = useState('')
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (name.trim()) onSubmit(name.trim())
+      }}
+      className="mt-3 max-w-md rounded-xl border border-brand-300 bg-brand-50/40 p-4"
+    >
+      <ErrorNote error={error} />
+      <label className="block text-sm">
+        <span className="font-semibold text-gray-700">ชื่อหมวดหมู่ใหม่</span>
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') onCancel()
+          }}
+          placeholder="เช่น ของหวาน"
+          className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 outline-none focus:border-brand-300"
+        />
+      </label>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border-2 border-gray-300 bg-white py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-50"
+        >
+          ยกเลิก
+        </button>
+        <button
+          type="submit"
+          disabled={isSaving || !name.trim()}
+          className="rounded-lg bg-brand-300 py-2 text-sm font-bold text-white transition hover:bg-brand-400 disabled:opacity-60"
+        >
+          {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+/** ชิปหมวดหมู่ — เล็กกว่า TabButton และไม่มีขอบตอนไม่ active แถวยาว ๆ จะได้ไม่รก */
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${
+        active
+          ? 'bg-brand-400 text-white'
+          : 'bg-gray-100 text-gray-700 hover:bg-brand-50 hover:text-brand-400'
+      }`}
+    >
+      {children}
+    </button>
   )
 }
 

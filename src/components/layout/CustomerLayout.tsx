@@ -1,6 +1,9 @@
+import { useCustomerLiveEvents } from '@/features/live/hooks'
 import { useSession } from '@/features/public/hooks'
 import { cartCount, useCart } from '@/features/public/cart-store'
-import { RESTAURANT_NAME } from '@/lib/mock/db'
+import { ApiError } from '@/lib/api-client'
+import { RESTAURANT_NAME } from '@/lib/config'
+import { TableSessionStatus } from '@/types/enums'
 import { useEffect, type ReactNode } from 'react'
 import { NavLink, Outlet, useParams } from 'react-router-dom'
 
@@ -49,19 +52,54 @@ interface Tab {
   badge?: number
 }
 
+/**
+ * backend ตอบ 400 เมื่อ session ปิดบิลแล้ว/หมดอายุ (token ถูกต้องแต่ใช้ต่อไม่ได้)
+ * ส่วน 404 คือ token มั่ว — แยกข้อความให้ลูกค้าเข้าใจว่าเกิดอะไร
+ */
+const isClosedSessionError = (error: unknown) =>
+  error instanceof ApiError && error.status === 400
+
 export function CustomerLayout() {
   const { token } = useParams()
   const { data: session, isPending, isError, error } = useSession(token)
+  // สถานะอาหาร / ปิดบิล อัปเดตทันทีผ่าน socket ของ session นี้
+  useCustomerLiveEvents(token)
   const lines = useCart((s) => s.lines)
   const bindToken = useCart((s) => s.bindToken)
+  const clearCart = useCart((s) => s.clear)
   const count = cartCount(lines)
+
+  // ปิดบิลแล้ว = ทั้งกรณี backend ตอบ 400 และกรณี session โหลดมาแล้วสถานะไม่ใช่ OPEN
+  const isClosed =
+    (isError && isClosedSessionError(error)) ||
+    (session !== undefined && session.status !== TableSessionStatus.OPEN)
 
   // สแกน QR โต๊ะใหม่บนเครื่องเดิม ต้องไม่เอาตะกร้าโต๊ะเก่ามาด้วย
   useEffect(() => {
     if (token) bindToken(token)
   }, [token, bindToken])
 
-  // token ผิด/หมดอายุ — กันตั้งแต่หน้าแรก ไม่ให้สั่งของแล้วไปพังตอนกดส่ง
+  // โต๊ะปิดแล้ว ของในตะกร้าสั่งไม่ได้อีก — ล้างทิ้งกันค้างใน localStorage
+  useEffect(() => {
+    if (isClosed) clearCart()
+  }, [isClosed, clearCart])
+
+  // แคชเชียร์ปิดบิลไปแล้ว (ทั้งตอนเปิดหน้าใหม่ และระหว่างที่ลูกค้าเปิดหน้าค้างไว้)
+  if (isClosed) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
+        <span aria-hidden className="text-4xl">
+          🧾
+        </span>
+        <h1 className="text-lg font-bold text-ink">โต๊ะนี้ปิดบิลแล้ว</h1>
+        <p className="text-sm text-gray-600">
+          ขอบคุณที่มาใช้บริการ หากต้องการสั่งเพิ่มกรุณาเรียกพนักงานเพื่อเปิดโต๊ะใหม่
+        </p>
+      </div>
+    )
+  }
+
+  // token ผิด — กันตั้งแต่หน้าแรก ไม่ให้สั่งของแล้วไปพังตอนกดส่ง
   if (isError) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
@@ -81,7 +119,7 @@ export function CustomerLayout() {
 
   const tabs: Tab[] = [
     { to: `/t/${token}`, label: 'เมนูอาหาร', icon: <IconHome />, end: true },
-    { to: `/t/${token}/cart`, label: 'ตะกร้าสินค้า', icon: <IconCart />, end: false, badge: count },
+    { to: `/t/${token}/cart`, label: 'รายการที่เลือก', icon: <IconCart />, end: false, badge: count },
     { to: `/t/${token}/bill`, label: 'เช็คบิลอาหาร', icon: <IconBill />, end: false },
     { to: `/t/${token}/status`, label: 'สถานะอาหาร', icon: <IconClock />, end: false },
   ]

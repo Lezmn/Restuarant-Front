@@ -1,6 +1,9 @@
 import { FoodImage } from '@/components/ui/FoodImage'
 import { SearchInput } from '@/components/ui/SearchInput'
-import { useCategories, useMenuItems } from '@/features/menu/hooks'
+import {
+  usePublicCategories,
+  usePublicMenu,
+} from '@/features/public/hooks'
 import { cartCount, cartTotal, useCart } from '@/features/public/cart-store'
 import { formatBaht } from '@/lib/format'
 import { useMemo, useState } from 'react'
@@ -8,8 +11,8 @@ import { Link, useParams } from 'react-router-dom'
 
 export function CustomerMenuPage() {
   const { token } = useParams()
-  const { data: categories } = useCategories()
-  const { data: items, isPending } = useMenuItems()
+  const { data: categories } = usePublicCategories()
+  const { data: items, isPending } = usePublicMenu()
   const lines = useCart((s) => s.lines)
 
   const [search, setSearch] = useState('')
@@ -122,7 +125,7 @@ export function CustomerMenuPage() {
           className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-md items-center justify-between bg-brand-300 px-4 py-3 text-white shadow-lg md:hidden"
         >
           <span className="text-sm font-medium">
-            ตะกร้า {cartCount(lines)} รายการ
+            เลือกแล้ว {cartCount(lines)} รายการ
           </span>
           <span className="font-bold">{formatBaht(cartTotal(lines))}</span>
         </Link>
