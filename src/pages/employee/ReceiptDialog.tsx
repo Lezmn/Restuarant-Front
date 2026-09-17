@@ -19,15 +19,14 @@ const issuedAt = (iso: string) =>
 /** ใบเสร็จหลังรับชำระเงิน — พิมพ์ได้ด้วย .print-area เหมือนป้าย QR */
 export function ReceiptDialog({
   payment,
-  note,
   onClose,
 }: {
   payment: Payment
-  /** หมายเหตุที่พนักงานพิมพ์ตอนรับเงิน — พิมพ์ลงใบเสร็จอย่างเดียว backend ยังไม่มี field นี้ */
-  note?: string
   onClose: () => void
 }) {
   const receipt = payment.receipt
+  // หมายเหตุอยู่ใน DB แล้ว — เปิดใบเสร็จย้อนหลังจาก PaidBills ก็เห็นเหมือนตอนพิมพ์ครั้งแรก
+  const note = receipt?.note ?? payment.note
 
   if (!receipt) {
     return (

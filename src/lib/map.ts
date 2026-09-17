@@ -2,8 +2,10 @@
  * แปลงข้อมูลดิบจาก API ให้เป็น type ที่หน้าจอใช้
  * รวมความต่างทั้งหมดไว้ที่ไฟล์เดียว ถ้า backend เปลี่ยน field ก็แก้ที่นี่ที่เดียว
  */
+import { MenuOptionGroupKind } from '@/types/enums'
 import type {
   ApiMenuItem,
+  ApiMenuOption,
   ApiOrder,
   ApiPayment,
   ApiReceipt,
@@ -14,6 +16,8 @@ import type {
 } from '@/types/api'
 import type {
   MenuItem,
+  MenuOption,
+  MenuOptionGroup,
   Order,
   Payment,
   Receipt,
@@ -45,10 +49,55 @@ export const mapTable = (t: ApiTable): RestaurantTable => ({
 })
 
 /**
- * MenuOption ฝั่ง backend เป็น array แบน ยังไม่มีการจัดกลุ่ม
- * จึงยุบให้เป็นกลุ่มเดียวชื่อ "เพิ่มเติม" เลือกได้หลายอัน
- * (ดีไซน์ต้องการ radio ของ "เนื้อสัตว์" ด้วย ต้องรอ MenuOptionGroup ฝั่ง backend)
+ * MenuOption ฝั่ง backend เป็น array แบน มีฟิลด์ group บอกว่าอยู่กลุ่มไหน
+ * ฝั่งหน้าจอต้องการเป็นกลุ่ม ๆ จึงจับกลุ่มที่นี่
+ * เรียงตามลำดับนี้เสมอ ไม่ขึ้นกับลำดับที่ API ส่งมา
  */
+const OPTION_GROUPS: {
+  kind: MenuOptionGroupKind
+  name: string
+  selectType: MenuOptionGroup['selectType']
+  required: boolean
+}[] = [
+  {
+    kind: MenuOptionGroupKind.PROTEIN,
+    name: 'เนื้อสัตว์',
+    selectType: 'single',
+    required: true,
+  },
+  {
+    kind: MenuOptionGroupKind.EXTRA,
+    name: 'เพิ่มเติม',
+    selectType: 'multiple',
+    required: false,
+  },
+]
+
+const mapMenuOption = (o: ApiMenuOption): MenuOption => ({
+  id: o.id,
+  name: o.name,
+  price: o.price,
+  isAvailable: o.isAvailable,
+})
+
+/** ตัวเลือกที่ backend ไม่ได้ส่ง group มา ถือเป็น EXTRA ตาม default ของ schema */
+const optionGroupsOf = (m: ApiMenuItem): MenuOptionGroup[] =>
+  OPTION_GROUPS.flatMap((group) => {
+    const options = (m.options ?? []).filter(
+      (o) => (o.group ?? MenuOptionGroupKind.EXTRA) === group.kind,
+    )
+    if (options.length === 0) return []
+    return [
+      {
+        id: `${m.id}-${group.kind.toLowerCase()}`,
+        name: group.name,
+        selectType: group.selectType,
+        required: group.required,
+        options: options.map(mapMenuOption),
+      },
+    ]
+  })
+
 export const mapMenuItem = (m: ApiMenuItem): MenuItem => ({
   id: m.id,
   categoryId: m.categoryId,
@@ -57,23 +106,7 @@ export const mapMenuItem = (m: ApiMenuItem): MenuItem => ({
   price: m.price,
   imageUrl: m.imageUrl,
   isAvailable: m.isAvailable,
-  optionGroups:
-    m.options && m.options.length > 0
-      ? [
-          {
-            id: `${m.id}-options`,
-            name: 'เพิ่มเติม',
-            selectType: 'multiple',
-            required: false,
-            options: m.options.map((o) => ({
-              id: o.id,
-              name: o.name,
-              price: o.price,
-              isAvailable: o.isAvailable,
-            })),
-          },
-        ]
-      : [],
+  optionGroups: optionGroupsOf(m),
 })
 
 export const mapOrder = (o: ApiOrder): Order => ({
@@ -134,6 +167,7 @@ export const mapReceipt = (
   total: r.total,
   issuedAt: r.issuedAt,
   tableName: tableNameText,
+  note: r.note ?? null,
   items: (r.items ?? []).map((item) => ({
     id: item.id,
     name: item.name,
@@ -146,16 +180,21 @@ export const mapReceipt = (
 })
 
 /** fallbackTableName ใช้ตอน backend ไม่ได้ส่ง tableSession มาด้วย (เช่นตอน POST /payments) */
-export const mapPayment = (p: ApiPayment, fallbackTableName?: string): Payment => ({
-  id: p.id,
-  tableSessionId: p.tableSessionId,
-  method: p.method,
-  amount: p.amount,
-  paidAt: p.paidAt,
-  receipt: p.receipt
-    ? mapReceipt(
-        p.receipt,
-        p.tableSession?.table ? tableName(p.tableSession.table) : (fallbackTableName ?? '-'),
-      )
-    : null,
-})
+export const mapPayment = (p: ApiPayment, fallbackTableName?: string): Payment => {
+  const table = p.tableSession?.table
+    ? tableName(p.tableSession.table)
+    : (fallbackTableName ?? '-')
+  return {
+    id: p.id,
+    tableSessionId: p.tableSessionId,
+    tableName: table,
+    method: p.method,
+    status: p.status,
+    amount: p.amount,
+    paidAt: p.paidAt,
+    voidedAt: p.voidedAt ?? null,
+    voidReason: p.voidReason ?? null,
+    note: p.note ?? null,
+    receipt: p.receipt ? mapReceipt(p.receipt, table) : null,
+  }
+}

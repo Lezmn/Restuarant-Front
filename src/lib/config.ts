@@ -13,3 +13,10 @@ export const PROMPTPAY_ID =
 
 /** true = ยังไม่ได้ตั้งค่าจริง (ใช้เบอร์ตัวอย่าง) ให้ UI เตือนไว้ */
 export const IS_DEMO_PROMPTPAY = !import.meta.env.VITE_PROMPTPAY_ID
+
+/**
+ * โดเมนที่เติมท้ายชื่อผู้ใช้ตอน login — backend รับเฉพาะอีเมล
+ * แต่พนักงานจำแค่ "admin" / "cashier" จึงเติม @โดเมน ให้เอง (ตรงกับ prisma/seed.ts)
+ */
+export const LOGIN_EMAIL_DOMAIN =
+  import.meta.env.VITE_LOGIN_EMAIL_DOMAIN ?? 'restaurant.local'

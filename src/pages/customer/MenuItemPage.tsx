@@ -134,7 +134,7 @@ export function CustomerMenuItemPage() {
             >
               {missingRequired.length > 0
                 ? `กรุณาเลือก${missingRequired[0].name}`
-                : `เพิ่มลงตะกร้า ${formatBaht(unitPrice * quantity)}`}
+                : `เพิ่มรายการ ${formatBaht(unitPrice * quantity)}`}
             </button>
           </div>
         </div>

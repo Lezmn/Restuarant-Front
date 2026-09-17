@@ -39,6 +39,24 @@ export const PaymentMethod = {
 } as const
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod]
 
+export const PaymentStatus = {
+  COMPLETED: 'COMPLETED',
+  VOIDED: 'VOIDED',
+} as const
+export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus]
+
+/** หมวดรายจ่ายของร้าน (prisma enum ExpenseCategory) */
+export const ExpenseCategory = {
+  INGREDIENTS: 'INGREDIENTS',
+  UTILITIES: 'UTILITIES',
+  SALARY: 'SALARY',
+  EQUIPMENT: 'EQUIPMENT',
+  RENT: 'RENT',
+  OTHER: 'OTHER',
+} as const
+export type ExpenseCategory =
+  (typeof ExpenseCategory)[keyof typeof ExpenseCategory]
+
 export const ServiceRequestType = {
   CALL_STAFF: 'CALL_STAFF',
   CHECKOUT: 'CHECKOUT',
@@ -46,6 +64,20 @@ export const ServiceRequestType = {
 } as const
 export type ServiceRequestType =
   (typeof ServiceRequestType)[keyof typeof ServiceRequestType]
+
+/**
+ * กลุ่มของตัวเลือกเมนู (prisma enum MenuOptionGroup)
+ * ตั้งชื่อว่า ...Kind กันชนกับ MenuOptionGroup ใน types/models.ts
+ * ซึ่งเป็นกลุ่มที่ประกอบเสร็จแล้วสำหรับหน้าจอ
+ */
+export const MenuOptionGroupKind = {
+  /** เนื้อสัตว์ — เลือกได้อย่างเดียว */
+  PROTEIN: 'PROTEIN',
+  /** ท็อปปิ้ง/เพิ่มเติมอื่น ๆ — เลือกได้หลายอัน */
+  EXTRA: 'EXTRA',
+} as const
+export type MenuOptionGroupKind =
+  (typeof MenuOptionGroupKind)[keyof typeof MenuOptionGroupKind]
 
 export const ServiceRequestStatus = {
   PENDING: 'PENDING',

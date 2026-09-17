@@ -1,6 +1,7 @@
 import { CallStaffAlert } from '@/components/CallStaffAlert'
 import { pageRoles } from '@/features/auth/permissions'
 import { useAuth } from '@/features/auth/use-auth'
+import { useStaffLiveEvents } from '@/features/live/hooks'
 import { useTables } from '@/features/tables/hooks'
 import { RESTAURANT_NAME } from '@/lib/config'
 import { Role, TableStatus } from '@/types/enums'
@@ -89,6 +90,8 @@ export function EmployeeLayout() {
   const signOut = useAuth((s) => s.signOut)
   const navigate = useNavigate()
   const { data: tables } = useTables()
+  // ต่อ socket ที่ layout จึงได้ event ทุกหน้าของพนักงาน (ครัว / Check / โต๊ะ / คำขอ)
+  useStaffLiveEvents()
 
   const available =
     tables?.filter((t) => t.status === TableStatus.AVAILABLE).length ?? 0

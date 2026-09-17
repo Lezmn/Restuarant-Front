@@ -125,7 +125,7 @@ export function CustomerMenuPage() {
           className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-md items-center justify-between bg-brand-300 px-4 py-3 text-white shadow-lg md:hidden"
         >
           <span className="text-sm font-medium">
-            ตะกร้า {cartCount(lines)} รายการ
+            เลือกแล้ว {cartCount(lines)} รายการ
           </span>
           <span className="font-bold">{formatBaht(cartTotal(lines))}</span>
         </Link>

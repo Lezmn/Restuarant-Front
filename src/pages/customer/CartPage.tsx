@@ -22,7 +22,7 @@ export function CustomerCartPage() {
   if (lines.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-sm text-gray-500">ยังไม่มีรายการในตะกร้า</p>
+        <p className="text-sm text-gray-500">ยังไม่มีรายการที่เลือก</p>
         <Link
           to={`/t/${token}`}
           className="mt-4 inline-block rounded-full bg-brand-300 px-6 py-2.5 text-sm font-bold text-white"

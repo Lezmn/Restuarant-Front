@@ -2,6 +2,19 @@ import { StatCard } from '@/components/ui/StatCard'
 import { TrendChart } from '@/components/ui/TrendChart'
 import { useDashboard } from '@/features/reports/hooks'
 import { formatBaht } from '@/lib/format'
+import { PaymentMethod } from '@/types/enums'
+
+const methodLabel: Record<PaymentMethod, string> = {
+  [PaymentMethod.CASH]: 'จ่ายเงินสด',
+  [PaymentMethod.PROMPTPAY]: 'จ่าย PromptPay',
+  [PaymentMethod.CARD]: 'จ่ายบัตร',
+}
+
+const methodIcon: Record<PaymentMethod, string> = {
+  [PaymentMethod.CASH]: '💰',
+  [PaymentMethod.PROMPTPAY]: '📱',
+  [PaymentMethod.CARD]: '💳',
+}
 
 const thaiDate = (iso: string) =>
   new Date(iso).toLocaleDateString('th-TH', {
@@ -14,10 +27,17 @@ const minutesSince = (iso: string) =>
   Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000))
 
 export function DashboardPage() {
-  const { data, isPending } = useDashboard()
+  const { data, isPending, isError, error } = useDashboard()
 
-  if (isPending || !data) {
+  if (isPending) {
     return <p className="text-sm text-gray-500">กำลังโหลด...</p>
+  }
+  if (isError || !data) {
+    return (
+      <p className="text-sm text-danger">
+        {error instanceof Error ? error.message : 'โหลดข้อมูลไม่สำเร็จ'}
+      </p>
+    )
   }
 
   const { summary, trend, todayStatus, notifications } = data
@@ -69,19 +89,24 @@ export function DashboardPage() {
           <dl className="divide-y divide-gray-200">
             <StatusRow
               label="จ่ายเงินสด"
-              value={todayStatus.cashCount.toString()}
+              value={`${todayStatus.cashCount} บิล`}
             />
             <StatusRow
               label="จ่าย PromptPay"
-              value={todayStatus.promptPayCount.toString()}
+              value={`${todayStatus.promptPayCount} บิล`}
+            />
+            <StatusRow
+              label="จ่ายบัตร"
+              value={`${todayStatus.cardCount} บิล`}
             />
             <StatusRow
               label="โต๊ะที่ใช้งานอยู่"
               value={`${todayStatus.tablesInUse}/${todayStatus.tablesTotal}`}
             />
+            {/* ดีไซน์เดิมเป็น "ลูกค้าเข้าใช้บริการ" แต่ backend ไม่ได้นับหัวลูกค้า — ใช้รายจ่ายวันนี้แทน */}
             <StatusRow
-              label="ลูกค้าเข้าใช้บริการ"
-              value={todayStatus.customerCount.toString()}
+              label="รายจ่ายวันนี้"
+              value={formatBaht(summary.expenseTotal)}
             />
           </dl>
         </section>
@@ -93,19 +118,18 @@ export function DashboardPage() {
 
         {notifications.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">
-            ยังไม่มีการแจ้งเตือน
+            วันนี้ยังไม่มีบิลที่รับเงิน
           </p>
         ) : (
           <ul className="divide-y divide-gray-200">
             {notifications.map((note) => (
               <li key={note.id} className="flex items-center gap-3 py-3">
                 <span aria-hidden className="text-xl">
-                  {note.method === 'CASH' ? '💰' : '📱'}
+                  {methodIcon[note.method]}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-black">
-                    โต๊ะ {note.tableName}{' '}
-                    {note.method === 'CASH' ? 'จ่ายเงินสด' : 'จ่าย PromptPay'}
+                    โต๊ะ {note.tableName} {methodLabel[note.method]}
                   </p>
                   <p className="text-xs text-gray-500">
                     {minutesSince(note.createdAt)} นาทีที่แล้ว

@@ -1,17 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { addExpense, getFinance } from './api'
-
-export const financeKeys = {
-  all: ['finance'] as const,
-}
-
-export const useFinance = () =>
-  useQuery({ queryKey: financeKeys.all, queryFn: getFinance })
+import { reportKeys } from '@/features/reports/hooks'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { addExpense } from './api'
 
 export function useAddExpense() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: addExpense,
-    onSuccess: () => qc.invalidateQueries({ queryKey: financeKeys.all }),
+    // รายจ่ายใหม่กระทบทั้งหน้ารายรับ-รายจ่ายและยอด "รายจ่ายวันนี้" บน Dashboard
+    onSuccess: () => qc.invalidateQueries({ queryKey: reportKeys.all }),
   })
 }

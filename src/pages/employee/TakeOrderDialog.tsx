@@ -9,7 +9,7 @@ import { useMemo, useState } from 'react'
 
 /**
  * พนักงานรับออเดอร์แทนลูกค้า — สำหรับลูกค้าที่ไม่ได้สแกน QR
- * (ยังไม่รองรับตัวเลือกเมนู เพราะ backend ยังไม่มี MenuOptionGroup)
+ * (หน้านี้ยังสั่งได้แค่เมนูเปล่า ๆ ยังไม่ให้เลือกตัวเลือกเมนู)
  */
 export function TakeOrderDialog({
   session,

@@ -1,37 +1,23 @@
-import { delay } from '@/lib/mock/db'
-import { mockFinance, mockTransactions } from '@/lib/mock/reports'
-import type { ExpenseCategory, FinanceData } from '@/types/reports'
+import { apiClient } from '@/lib/api-client'
+import type { ApiExpense } from '@/types/api'
+import type { ExpenseCategory } from '@/types/enums'
 
-// ของจริงจะเป็น GET /reports/finance + POST /expenses
-// backend ยังไม่มีทั้ง Expense model และ expenses module
-export async function getFinance(): Promise<FinanceData> {
-  await delay()
-  return {
-    ...mockFinance,
-    transactions: [...mockTransactions].sort((a, b) =>
-      b.date.localeCompare(a.date),
-    ),
-  }
-}
-
+/** POST /expenses @Roles(ADMIN) — backend ใช้เวลาปัจจุบันเป็น spentAt ถ้าไม่ส่ง */
 export async function addExpense(vars: {
   detail: string
   category: ExpenseCategory
   amount: number
-}): Promise<void> {
-  await delay(300)
+}): Promise<ApiExpense> {
+  // backend ก็ validate อยู่แล้ว แต่ข้อความฝั่งนี้อ่านง่ายกว่า class-validator
   if (!vars.detail.trim()) throw new Error('กรุณากรอกรายละเอียด')
-  if (vars.amount <= 0) throw new Error('จำนวนเงินต้องมากกว่า 0')
+  if (!(vars.amount > 0)) throw new Error('จำนวนเงินต้องมากกว่า 0')
 
-  mockTransactions.push({
-    id: `tx-${Date.now()}`,
-    date: new Date().toISOString(),
-    detail: vars.detail.trim(),
-    category: vars.category,
-    // รายจ่ายเก็บเป็นค่าลบ เพื่อให้รวมยอดในตารางเดียวกับรายรับได้
-    amount: -Math.abs(vars.amount),
+  return apiClient<ApiExpense>('/expenses', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: vars.detail.trim(),
+      category: vars.category,
+      amount: vars.amount,
+    }),
   })
-
-  mockFinance.summary.expenseTotal += Math.abs(vars.amount)
-  mockFinance.summary.netProfit -= Math.abs(vars.amount)
 }

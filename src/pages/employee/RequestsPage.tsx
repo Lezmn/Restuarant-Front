@@ -5,6 +5,7 @@ import {
   useServiceRequests,
 } from '@/features/service-requests/hooks'
 import { formatTime } from '@/lib/format'
+import { useLiveStatus } from '@/lib/live'
 import { ServiceRequestStatus, ServiceRequestType } from '@/types/enums'
 
 const REQUEST_POLL_MS = 10_000
@@ -32,12 +33,17 @@ export function RequestsPage() {
     refetchInterval: REQUEST_POLL_MS,
   })
   const resolve = useResolveServiceRequest()
+  const live = useLiveStatus((s) => s.connected)
 
   return (
     <div>
       <PageHeader
         title="คำขอจากโต๊ะ"
-        description={`เรียกพนักงาน / ขอเช็คบิล · รีเฟรชทุก ${REQUEST_POLL_MS / 1000} วินาที`}
+        description={
+          live
+            ? 'เรียกพนักงาน / ขอเช็คบิล · อัปเดตทันที'
+            : `เรียกพนักงาน / ขอเช็คบิล · ออฟไลน์ รีเฟรชทุก ${REQUEST_POLL_MS / 1000} วินาที`
+        }
       />
 
       {isPending && <p className="text-sm text-gray-500">กำลังโหลด...</p>}

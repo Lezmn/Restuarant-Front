@@ -1,7 +1,6 @@
 import { ErrorNote } from '@/components/ui/ErrorNote'
 import { Modal } from '@/components/ui/Modal'
 import { useOrders } from '@/features/orders/hooks'
-import { orderTotal } from '@/features/orders/order-total'
 import { useCreatePayment } from '@/features/payments/hooks'
 import { useServiceRequests } from '@/features/service-requests/hooks'
 import { useSessions } from '@/features/table-sessions/hooks'
@@ -17,6 +16,7 @@ import {
   TableSessionStatus,
 } from '@/types/enums'
 import type { Id, Payment } from '@/types/models'
+import { PaidBills } from './PaidBills'
 import { ReceiptDialog } from './ReceiptDialog'
 import { QRCodeSVG } from 'qrcode.react'
 import { useMemo, useState } from 'react'
@@ -83,19 +83,18 @@ export function CheckPage() {
         r.status === ServiceRequestStatus.PENDING,
     )
 
-    /**
-     * ยอดที่ต้องจ่ายจริง = เฉพาะออเดอร์ที่ยังไม่ได้จ่ายและไม่ได้ยกเลิก
-     * (field total ของ session รวมออเดอร์ที่จ่ายไปแล้วด้วย ทำให้ยอดบนจอ
-     *  ไม่ตรงกับยอดที่ backend เก็บจริงตอนแยกบิล)
-     */
+    // ยอดค้างจ่ายมาจาก backend (total ของ session = ออเดอร์ที่ยังไม่จ่ายและไม่ยกเลิก)
+    // ไม่บวกเองฝั่งนี้ เพื่อให้ตรงกับยอดที่ backend เก็บจริงเสมอ
+    const outstanding = session.total
+
+    // ออเดอร์ใช้แค่เช็คว่ายังมีอะไรค้างเสิร์ฟไหม — backend ไม่ยอมให้จ่ายถ้ายังไม่เสิร์ฟครบ
+    // บอกไว้ก่อนกด จะได้ไม่เจอ error
     const unpaid = (orders ?? []).filter(
       (o) =>
         o.tableSessionId === session.id &&
         o.status !== OrderStatus.PAID &&
         o.status !== OrderStatus.CANCELLED,
     )
-    const outstanding = unpaid.reduce((sum, o) => sum + orderTotal(o), 0)
-    // backend ไม่ยอมให้จ่ายถ้ายังมีออเดอร์ที่ไม่ได้เสิร์ฟ — บอกไว้ก่อนกด จะได้ไม่เจอ error
     const notServed = unpaid.filter((o) => o.status !== OrderStatus.SERVED)
 
     return { session, outstanding, unpaid, notServed, checkout }
@@ -220,12 +219,10 @@ export function CheckPage() {
         </table>
       </div>
 
+      <PaidBills />
+
       {receipt && (
-        <ReceiptDialog
-          payment={receipt}
-          note={receiptNote}
-          onClose={() => setReceipt(null)}
-        />
+        <ReceiptDialog payment={receipt} onClose={() => setReceipt(null)} />
       )}
 
       {target && (
@@ -239,11 +236,11 @@ export function CheckPage() {
                 tableSessionId: target.sessionId,
                 method,
                 tableName: target.tableName,
+                note,
               },
               {
                 onSuccess: (payment) => {
                   setTarget(null)
-                  setReceiptNote(note)
                   setReceipt(payment)
                 },
               },

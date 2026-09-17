@@ -1,34 +1,43 @@
 import { ErrorNote } from '@/components/ui/ErrorNote'
 import { StatCard } from '@/components/ui/StatCard'
-import { useAddExpense, useFinance } from '@/features/expenses/hooks'
+import { useAddExpense } from '@/features/expenses/hooks'
+import { currentMonth } from '@/features/reports/api'
+import { useFinance } from '@/features/reports/hooks'
 import { formatBaht } from '@/lib/format'
-import { ExpenseCategory } from '@/types/reports'
+import { ExpenseCategory, PaymentMethod } from '@/types/enums'
 import { useMemo, useState } from 'react'
 
-const categoryLabel: Record<string, string> = {
-  [ExpenseCategory.INGREDIENT]: 'วัตถุดิบ',
+/** ป้ายหมวดในตาราง — รายรับใช้วิธีจ่าย รายจ่ายใช้หมวดรายจ่าย */
+const categoryLabel: Record<PaymentMethod | ExpenseCategory, string> = {
+  [PaymentMethod.CASH]: 'เงินสด',
+  [PaymentMethod.PROMPTPAY]: 'PromptPay',
+  [PaymentMethod.CARD]: 'บัตร',
+  [ExpenseCategory.INGREDIENTS]: 'วัตถุดิบ',
+  [ExpenseCategory.UTILITIES]: 'ค่าน้ำค่าไฟ',
+  [ExpenseCategory.SALARY]: 'เงินเดือน',
+  [ExpenseCategory.EQUIPMENT]: 'อุปกรณ์',
   [ExpenseCategory.RENT]: 'ค่าเช่าร้าน',
-  [ExpenseCategory.UTILITY]: 'ค่าน้ำค่าไฟ',
   [ExpenseCategory.OTHER]: 'อื่น ๆ',
-  PROMPTPAY: 'PromptPay',
-  CASH: 'เงินสด',
 }
 
-const categoryTone: Record<string, string> = {
-  [ExpenseCategory.INGREDIENT]: 'bg-danger/10 text-danger',
+const categoryTone: Record<PaymentMethod | ExpenseCategory, string> = {
+  [PaymentMethod.CASH]: 'bg-success/10 text-success',
+  [PaymentMethod.PROMPTPAY]: 'bg-success/10 text-success',
+  [PaymentMethod.CARD]: 'bg-success/10 text-success',
+  [ExpenseCategory.INGREDIENTS]: 'bg-danger/10 text-danger',
+  [ExpenseCategory.UTILITIES]: 'bg-brand-50 text-brand-500',
+  [ExpenseCategory.SALARY]: 'bg-brand-50 text-brand-500',
+  [ExpenseCategory.EQUIPMENT]: 'bg-brand-50 text-brand-500',
   [ExpenseCategory.RENT]: 'bg-brand-50 text-brand-500',
-  [ExpenseCategory.UTILITY]: 'bg-brand-50 text-brand-500',
   [ExpenseCategory.OTHER]: 'bg-gray-100 text-gray-600',
-  PROMPTPAY: 'bg-success/10 text-success',
-  CASH: 'bg-success/10 text-success',
 }
 
-const filters = [
+type Filter = 'ALL' | PaymentMethod | ExpenseCategory
+
+const filters: { key: Filter; label: string }[] = [
   { key: 'ALL', label: 'ทั้งหมด' },
-  { key: ExpenseCategory.INGREDIENT, label: 'วัตถุดิบ' },
-  { key: 'PROMPTPAY', label: 'PromptPay' },
-  { key: 'CASH', label: 'เงินสด' },
-  { key: ExpenseCategory.RENT, label: 'ค่าเช่าร้าน' },
+  ...Object.values(PaymentMethod).map((m) => ({ key: m, label: categoryLabel[m] })),
+  ...Object.values(ExpenseCategory).map((c) => ({ key: c, label: categoryLabel[c] })),
 ]
 
 const thaiDate = (iso: string) =>
@@ -39,9 +48,10 @@ const thaiDate = (iso: string) =>
   })
 
 export function FinancePage() {
-  const { data, isPending } = useFinance()
+  const [month, setMonth] = useState(currentMonth)
+  const { data, isPending, isError, error } = useFinance(month)
   const addExpense = useAddExpense()
-  const [filter, setFilter] = useState<string>('ALL')
+  const [filter, setFilter] = useState<Filter>('ALL')
   const [formOpen, setFormOpen] = useState(false)
 
   const transactions = useMemo(() => {
@@ -49,8 +59,15 @@ export function FinancePage() {
     return filter === 'ALL' ? list : list.filter((t) => t.category === filter)
   }, [data, filter])
 
-  if (isPending || !data) {
+  if (isPending) {
     return <p className="text-sm text-gray-500">กำลังโหลด...</p>
+  }
+  if (isError || !data) {
+    return (
+      <p className="text-sm text-danger">
+        {error instanceof Error ? error.message : 'โหลดข้อมูลไม่สำเร็จ'}
+      </p>
+    )
   }
 
   const { summary } = data
@@ -59,13 +76,26 @@ export function FinancePage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-black">ภาพรวมทางการเงิน</h1>
-        <button
-          type="button"
-          onClick={() => setFormOpen((v) => !v)}
-          className="rounded-lg bg-danger px-4 py-2 text-sm font-bold text-white"
-        >
-          {formOpen ? 'ปิดฟอร์ม' : '+ รายจ่าย'}
-        </button>
+        <div className="flex items-center gap-2">
+          <label className="text-sm">
+            <span className="sr-only">เดือน</span>
+            {/* backend สรุปเป็นรายเดือน (?month=YYYY-MM) */}
+            <input
+              type="month"
+              value={month}
+              max={currentMonth()}
+              onChange={(e) => e.target.value && setMonth(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:border-brand-300"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => setFormOpen((v) => !v)}
+            className="rounded-lg bg-danger px-4 py-2 text-sm font-bold text-white"
+          >
+            {formOpen ? 'ปิดฟอร์ม' : '+ รายจ่าย'}
+          </button>
+        </div>
       </div>
 
       <ErrorNote error={addExpense.error} />
@@ -106,8 +136,8 @@ export function FinancePage() {
           tone="purple"
         />
         <StatCard
-          label="จำนวนออเดอร์"
-          value={summary.orderCount.toLocaleString('th-TH')}
+          label="จำนวนบิล"
+          value={summary.paymentCount.toLocaleString('th-TH')}
           tone="olive"
         />
       </div>
@@ -162,11 +192,9 @@ export function FinancePage() {
                   <td className="px-4 py-3 text-sm text-black">{tx.detail}</td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                        categoryTone[tx.category] ?? 'bg-gray-100 text-gray-600'
-                      }`}
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${categoryTone[tx.category]}`}
                     >
-                      {categoryLabel[tx.category] ?? tx.category}
+                      {categoryLabel[tx.category]}
                     </span>
                   </td>
                   <td
@@ -191,7 +219,7 @@ function ExpenseForm({ onDone }: { onDone: () => void }) {
   const addExpense = useAddExpense()
   const [detail, setDetail] = useState('')
   const [category, setCategory] = useState<ExpenseCategory>(
-    ExpenseCategory.INGREDIENT,
+    ExpenseCategory.INGREDIENTS,
   )
   const [amount, setAmount] = useState('')
 

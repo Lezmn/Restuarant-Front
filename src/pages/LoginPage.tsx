@@ -28,7 +28,7 @@ export function LoginPage({
   const navigate = useNavigate()
   const login = useLogin()
 
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [denied, setDenied] = useState(false)
 
@@ -43,7 +43,7 @@ export function LoginPage({
           e.preventDefault()
           setDenied(false)
           login.mutate(
-            { email, password },
+            { username, password },
             {
               onSuccess: (data) => {
                 if (allowedRoles && !allowedRoles.includes(data.user.role)) {
@@ -70,12 +70,15 @@ export function LoginPage({
         </div>
 
         <label className="block text-sm font-semibold text-gray-700">
-          อีเมล
+          ผู้ใช้
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            required
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-300"
           />
         </label>

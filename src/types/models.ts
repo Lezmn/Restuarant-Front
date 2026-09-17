@@ -1,6 +1,7 @@
 import type {
   OrderStatus,
   PaymentMethod,
+  PaymentStatus,
   Role,
   ServiceRequestStatus,
   ServiceRequestType,
@@ -31,10 +32,9 @@ export interface MenuOption {
   isAvailable: boolean
 }
 
-// ดีไซน์แยกตัวเลือกเป็น 2 แบบ: "เนื้อสัตว์" เลือกได้อันเดียว (radio)
-// กับ "เพิ่มเติม" เลือกได้หลายอัน (checkbox)
-// แต่ MenuOption ใน backend เป็น flat list ยังไม่มีฟิลด์กลุ่ม/ชนิดการเลือก
-// จึงจัดกลุ่มไว้ฝั่ง frontend ก่อน — ต้องเพิ่มใน schema ตอนต่อ API จริง
+// ตัวเลือกแยกเป็น 2 แบบ: "เนื้อสัตว์" (group=PROTEIN) เลือกได้อันเดียว (radio)
+// กับ "เพิ่มเติม" (group=EXTRA) เลือกได้หลายอัน (checkbox)
+// backend ส่ง MenuOption มาเป็น flat list พร้อมฟิลด์ group — จับกลุ่มที่ lib/map.ts
 export interface MenuOptionGroup {
   id: Id
   name: string
@@ -115,15 +115,23 @@ export interface Receipt {
   total: number
   issuedAt: string
   tableName: string
+  /** หมายเหตุท้ายใบเสร็จ — เก็บใน DB แล้ว เปิดดูย้อนหลังก็ยังอยู่ */
+  note: string | null
   items: ReceiptItem[]
 }
 
 export interface Payment {
   id: Id
   tableSessionId: Id
+  tableName: string
   method: PaymentMethod
+  status: PaymentStatus
   amount: number
   paidAt: string
+  /** ถ้าบิลถูกยกเลิก — เวลาและเหตุผลที่พนักงานกรอก */
+  voidedAt: string | null
+  voidReason: string | null
+  note: string | null
   receipt: Receipt | null
 }
 

@@ -54,7 +54,7 @@ export async function submitOrder(vars: {
   token: string
   lines: CartLine[]
 }): Promise<Order> {
-  if (vars.lines.length === 0) throw new Error('ยังไม่มีรายการในตะกร้า')
+  if (vars.lines.length === 0) throw new Error('ยังไม่มีรายการที่เลือก')
 
   const data = await apiClient<ApiOrder>('/public/orders', {
     method: 'POST',

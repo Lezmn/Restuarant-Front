@@ -2,13 +2,16 @@
  * รูปร่างข้อมูลดิบที่ API ส่งกลับมาจริง ๆ (ตรวจจาก response ของ NestJS)
  * ต่างจาก type ในโดเมนของ frontend หลายจุด เช่น
  *   - โต๊ะใช้ `number` (ตัวเลข) ไม่ใช่ `name`
- *   - ตัวเลือกเมนูเป็น array แบน ไม่มีการจัดกลุ่ม
+ *   - ตัวเลือกเมนูเป็น array แบน มีแค่ฟิลด์ group บอกกลุ่ม ต้องจับกลุ่มเองฝั่ง frontend
  *   - ออเดอร์ไม่มีเลขที่ (order number)
  * จึงมีชั้นแปลงอยู่ที่ lib/map.ts เพื่อไม่ให้ความต่างพวกนี้รั่วเข้าไปในหน้าจอ
  */
 import type {
+  ExpenseCategory,
+  MenuOptionGroupKind,
   OrderStatus,
   PaymentMethod,
+  PaymentStatus,
   Role,
   ServiceRequestStatus,
   ServiceRequestType,
@@ -39,6 +42,8 @@ export interface ApiMenuOption {
   id: string
   name: string
   price: number
+  /** PROTEIN = เนื้อสัตว์, EXTRA = เพิ่มเติม — backend default เป็น EXTRA */
+  group?: MenuOptionGroupKind
   isAvailable: boolean
 }
 
@@ -136,6 +141,8 @@ export interface ApiReceipt {
   total: number
   issuedAt: string
   tableId: string
+  /** หมายเหตุพิมพ์ท้ายใบเสร็จ (สำเนาจาก payment.note) */
+  note: string | null
   items?: ApiReceiptItem[]
 }
 
@@ -143,8 +150,67 @@ export interface ApiPayment {
   id: string
   amount: number
   method: PaymentMethod
+  status: PaymentStatus
   paidAt: string
+  voidedAt: string | null
+  voidReason: string | null
+  /** หมายเหตุที่พนักงานพิมพ์ตอนรับเงิน */
+  note: string | null
   tableSessionId: string
   receipt?: ApiReceipt | null
   tableSession?: ApiTableSession
+}
+
+/** GET /reports/dashboard @Roles(ADMIN) — สรุปของ "วันนี้" ตามเวลาของ server + เทรนด์ 7 วัน */
+export interface ApiDashboardReport {
+  /** เวลาเริ่มวันที่ใช้คำนวณ (ISO) — ใช้ตัดช่วง "วันนี้" ให้ตรงกับ backend */
+  date: string
+  revenue: number
+  expenses: number
+  netProfit: number
+  orderCount: number
+  paymentCount: number
+  revenueByMethod: Record<PaymentMethod, number>
+  tables: Record<TableStatus, number> & { total: number }
+  /** date เป็น YYYY-MM-DD ครบทุกวัน (วันที่ไม่มียอดเป็น 0) */
+  revenueTrend: { date: string; revenue: number }[]
+}
+
+/** GET /reports/income-expense?month=YYYY-MM @Roles(ADMIN) */
+export interface ApiIncomeExpenseReport {
+  range: { from: string | null; to: string | null }
+  totalIncome: number
+  totalExpense: number
+  netProfit: number
+  incomeByMethod: Record<PaymentMethod, number>
+  expenseByCategory: Record<ExpenseCategory, number>
+  /** รายรับ (จาก Payment) กับรายจ่าย (จาก Expense) รวมมาในลิสต์เดียว ล่าสุดก่อน */
+  transactions: (
+    | {
+        type: 'INCOME'
+        id: string
+        date: string
+        title: string
+        category: PaymentMethod
+        amount: number
+      }
+    | {
+        type: 'EXPENSE'
+        id: string
+        date: string
+        title: string
+        category: ExpenseCategory
+        amount: number
+      }
+  )[]
+}
+
+/** /expenses @Roles(ADMIN) */
+export interface ApiExpense {
+  id: string
+  title: string
+  amount: number
+  category: ExpenseCategory
+  note: string | null
+  spentAt: string
 }

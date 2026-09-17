@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { LIVE_STALE_TIME } from '@/lib/live'
+import { LIVE_STALE_TIME, useLivePollInterval } from '@/lib/live'
 import { closeSession, getSessions, openSession } from './api'
 
 export const sessionKeys = {
@@ -11,7 +11,7 @@ export const useSessions = (options?: { refetchInterval?: number }) =>
   useQuery({
     queryKey: sessionKeys.all,
     queryFn: getSessions,
-    refetchInterval: options?.refetchInterval,
+    refetchInterval: useLivePollInterval(options?.refetchInterval),
     staleTime: LIVE_STALE_TIME,
   })
 

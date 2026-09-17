@@ -15,13 +15,44 @@ export async function createPayment(vars: {
   method: PaymentMethod
   /** POST /payments ไม่ได้ส่ง tableSession กลับมา จึงต้องส่งชื่อโต๊ะมาเติมในใบเสร็จเอง */
   tableName: string
+  /** หมายเหตุตอนรับเงิน — backend เก็บลง payment + receipt */
+  note?: string
 }): Promise<Payment> {
   const data = await apiClient<ApiPayment>('/payments', {
     method: 'POST',
     body: JSON.stringify({
       tableSessionId: vars.tableSessionId,
       method: vars.method,
+      ...(vars.note ? { note: vars.note } : {}),
     }),
   })
   return mapPayment(data, vars.tableName)
+}
+
+/** GET /payments @Roles(ADMIN, STAFF) — รายการบิลทั้งหมด ล่าสุดก่อน (ไม่มี items ของใบเสร็จ) */
+export async function getPayments(): Promise<Payment[]> {
+  const data = await apiClient<ApiPayment[]>('/payments')
+  return data.map((p) => mapPayment(p))
+}
+
+/** GET /payments/:id — ตัวเดียวที่ส่ง receipt.items มาด้วย ใช้ตอนเปิดดู/พิมพ์ใบเสร็จย้อนหลัง */
+export async function getPayment(id: Id): Promise<Payment> {
+  const data = await apiClient<ApiPayment>(`/payments/${id}`)
+  return mapPayment(data)
+}
+
+/**
+ * PATCH /payments/:id/void @Roles(ADMIN, STAFF)
+ * backend: payment → VOIDED, ออเดอร์กลับเป็น SERVED + paymentId null,
+ * และเปิด session/โต๊ะกลับให้ถ้าปิดไปแล้ว → เก็บเงินใหม่ได้เลย
+ */
+export async function voidPayment(vars: {
+  id: Id
+  reason?: string
+}): Promise<Payment> {
+  const data = await apiClient<ApiPayment>(`/payments/${vars.id}/void`, {
+    method: 'PATCH',
+    body: JSON.stringify(vars.reason ? { reason: vars.reason } : {}),
+  })
+  return mapPayment(data)
 }
