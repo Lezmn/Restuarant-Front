@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { submitLogin } from './helpers'
+import { submitLogin } from '../helpers'
 
 // ⚠️ ต้องรัน backend จริง + seed data ที่ localhost:3000
 // เคสนี้: login ถูกต้องทุกอย่าง แต่ role ไม่มีสิทธิ์เข้าหน้านั้น (allowedRoles ไม่ตรง)

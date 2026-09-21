@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { submitLogin } from './helpers'
+import { submitLogin } from '../helpers'
 
 // ⚠️ ต้องรัน backend (NestJS) จริงที่ localhost:3000 เทสนี้ยิง POST /auth/login จริง
 //

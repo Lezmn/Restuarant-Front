@@ -47,3 +47,27 @@ export async function setAuthState(
     [accessToken, user] as const,
   )
 }
+
+/** login เป็น admin จริงผ่าน API แล้วยัด token ลง localStorage — ใช้ setup ก่อนทุกเทสที่ต้อง login เป็น admin */
+export async function loginAsAdmin(page: Page, request: APIRequestContext) {
+  const { accessToken, user } = await loginViaApi(request, 'admin', 'ChangeMe123!')
+  await page.goto('/employee/login')
+  await setAuthState(page, accessToken, user)
+  return user
+}
+
+/** login เป็น STAFF จริง — ใช้เทียบว่าหน้าที่ ADMIN เท่านั้นเข้าได้ จะกัน STAFF ออกจริง */
+export async function loginAsStaff(page: Page, request: APIRequestContext) {
+  const { accessToken, user } = await loginViaApi(request, 'waiter', 'ChangeMe123!')
+  await page.goto('/employee/login')
+  await setAuthState(page, accessToken, user)
+  return user
+}
+
+/** login เป็น cashier (STAFF) จริง — ใช้ทดสอบฝั่ง Check / เปิดโต๊ะ */
+export async function loginAsCashier(page: Page, request: APIRequestContext) {
+  const { accessToken, user } = await loginViaApi(request, 'cashier', 'ChangeMe123!')
+  await page.goto('/employee/login')
+  await setAuthState(page, accessToken, user)
+  return user
+}

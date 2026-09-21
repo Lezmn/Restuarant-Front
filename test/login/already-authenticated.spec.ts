@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { loginViaApi, setAuthState } from './helpers'
+import { loginViaApi, setAuthState } from '../helpers'
 
 // ⚠️ ต้องรัน backend จริง + seed data ที่ localhost:3000
 // ต้องใช้ token จริงจาก login API เท่านั้น เพราะหน้า /employee ยิง API จริงทันทีที่เข้า

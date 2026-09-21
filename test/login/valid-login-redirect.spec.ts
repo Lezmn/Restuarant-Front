@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { submitLogin } from './helpers'
+import { submitLogin } from '../helpers'
 
 // ⚠️ ต้องรัน backend จริง + seed data (prisma/seed.ts) ที่ localhost:3000
 // รหัสผ่าน seed ทุกบัญชีคือ "ChangeMe123!"
