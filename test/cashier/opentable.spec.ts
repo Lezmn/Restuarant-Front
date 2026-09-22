@@ -26,8 +26,15 @@ test('cashier เปิดโต๊ะที่ 1 แล้วจำนวนโ
   const table1Card = page
     .locator('article')
     .filter({ has: page.getByText('โต๊ะ 1', { exact: true }) })
+
+  // ก่อนเปิดโต๊ะ badge สถานะต้องขึ้นว่า "ว่าง"
+  await expect(table1Card.getByText('ว่าง', { exact: true })).toBeVisible()
+
   await table1Card.getByRole('button', { name: 'เปิดโต๊ะ + สร้าง QR' }).click()
   await expect(page.getByRole('dialog', { name: 'QR โต๊ะ 1' })).toBeVisible()
+
+  // เปิดโต๊ะสำเร็จแล้ว badge สถานะต้องเปลี่ยนเป็น "มีลูกค้า"
+  await expect(table1Card.getByText('มีลูกค้า', { exact: true })).toBeVisible()
 
   // 5. กดปุ่ม Check 2 ครั้ง — ครั้งแรกโดน overlay ของ QR modal บังอยู่ เลยแค่ปิด modal
   // ครั้งที่สอง modal ปิดแล้วถึงกดปุ่มนำทางไปหน้า Check ได้จริง
@@ -50,4 +57,7 @@ test('cashier เปิดโต๊ะที่ 1 แล้วจำนวนโ
   await expect(
     table1Card.getByRole('button', { name: 'เปิดโต๊ะ + สร้าง QR' }),
   ).toBeVisible()
+
+  // ปิดโต๊ะแล้ว badge สถานะต้องกลับไปเป็น "ว่าง" เหมือนเดิม
+  await expect(table1Card.getByText('ว่าง', { exact: true })).toBeVisible()
 })
