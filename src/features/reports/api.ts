@@ -13,8 +13,10 @@ import type {
 const DAY_MS = 24 * 60 * 60 * 1000
 
 /** "2026-09-17" → "พ." — parse แบบ local ไม่ให้ UTC เลื่อนวัน (narrow ได้ "พ" ไม่มีจุด) */
-const weekdayLabel = (ymd: string) =>
-  `${new Date(`${ymd}T00:00:00`).toLocaleDateString('th-TH', { weekday: 'narrow' })}.`
+const weekdayLabel = (ymd: string) => {
+  const day = new Date(`${ymd}T00:00:00`)
+  return `${day.toLocaleDateString('th-TH', { weekday: 'narrow' })}.`
+}
 
 /** เดือนปัจจุบันตามเครื่องผู้ใช้ ในรูป YYYY-MM ที่ backend รับ */
 export const currentMonth = () => {

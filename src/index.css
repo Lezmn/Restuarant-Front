@@ -71,10 +71,13 @@ body {
     visibility: visible;
   }
 
-  /* กล่องซ้อน (Modal) เป็น position:fixed ซึ่งเบราว์เซอร์จะวาดซ้ำทุกหน้ากระดาษ
-     ถ้าปล่อยไว้จะได้ใบเสร็จ 2 ชุด — ปลด fixed/absolute ให้เนื้อหาไหลปกติหน้าเดียว */
+  /* กล่องซ้อน (Modal) เคยเป็น position:fixed ซึ่งเบราว์เซอร์วาดซ้ำทุกหน้ากระดาษ = ใบเสร็จ 2 ชุด
+     ตอนนี้ Modal เป็น <dialog> + showModal() ซึ่งอยู่ top layer เบราว์เซอร์บังคับเป็น absolute
+     (สั่ง static ไม่ได้) — absolute ไม่วาดซ้ำต่อหน้าอยู่แล้ว แต่ต้องปลดขนาด/ตำแหน่งเต็มจอทิ้ง
+     ไม่งั้นกล่องจะกินพื้นที่เท่า viewport แล้วดันเนื้อหาใบเสร็จเพี้ยน */
   .print-shell {
     position: static !important;
+    inset: auto !important;
     display: block !important;
     overflow: visible !important;
     background: none !important;
@@ -85,19 +88,33 @@ body {
     max-height: none !important;
     max-width: none !important;
     width: auto !important;
+    height: auto !important;
   }
 
+  /* ::backdrop ของ <dialog> เป็นพื้นดำเต็มหน้า ถ้าไม่ปิดจะได้กระดาษดำทั้งแผ่น */
+  dialog::backdrop {
+    background: none !important;
+  }
+
+  /* ไม่กำหนด align-items ตรงนี้ — ปล่อยให้แต่ละที่คุมเอง
+     ป้าย QR ใส่ items-center ของมันเองอยู่แล้ว ส่วนใบเสร็จต้องการ stretch
+     (เดิมบังคับ center ทำให้แถว justify-between หดเท่าข้อความ label กับยอดเลยติดกัน) */
   .print-area {
     position: static;
     display: flex;
     flex-direction: column;
-    align-items: center;
     justify-content: flex-start;
     gap: 1rem;
     background: white;
     border: none;
     box-shadow: none;
     padding: 0;
+  }
+
+  /* ใบเสร็จ: คุมความกว้างเท่าสลิปจริงแล้วจัดกลางหน้า ไม่ให้ยืดเต็ม A4 จนอ่านยาก */
+  .print-receipt {
+    max-width: 80mm;
+    margin-inline: auto;
   }
 
   /* กันหน้าเปล่าท้ายกระดาษ */

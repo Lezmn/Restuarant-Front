@@ -32,8 +32,14 @@ interface CartState {
   clear: () => void
 }
 
+// เรียง option id ก่อนต่อเป็น key เพื่อให้เลือกตัวเลือกชุดเดียวกันคนละลำดับได้ id เดียวกัน
+// ต้องระบุ compare เอง — .sort() เปล่า ๆ เรียงตามลำดับ UTF-16 ซึ่งไม่ใช่ลำดับตัวอักษรจริง
 const makeLineId = (menuItemId: Id, options: CartOption[], note: string) =>
-  [menuItemId, ...options.map((o) => o.id).sort(), note].join('|')
+  [
+    menuItemId,
+    ...options.map((o) => o.id).sort((a, b) => a.localeCompare(b)),
+    note,
+  ].join('|')
 
 export const lineUnitPrice = (line: CartLine) =>
   line.basePrice + line.options.reduce((sum, o) => sum + o.price, 0)

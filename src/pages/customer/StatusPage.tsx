@@ -11,6 +11,9 @@ const steps = [
   { status: OrderStatus.SERVED, label: 'เสิร์ฟแล้ว', icon: '🍽' },
 ]
 
+/** สีเส้นเชื่อมระหว่างขั้นใน stepper — ทึบเมื่อเดินผ่านขั้นนั้นแล้ว */
+const barColor = (passed: boolean) => (passed ? 'bg-brand-300' : 'bg-gray-200')
+
 const stepIndex = (order: Order) => {
   if (order.status === OrderStatus.SERVED || order.status === OrderStatus.PAID)
     return 2
@@ -76,17 +79,15 @@ export function CustomerStatusPage() {
               {steps.map((step, index) => {
                 const current = stepIndex(latest)
                 const done = index <= current
+                // เส้นเชื่อมซ้าย/ขวาของแต่ละขั้น: หัวกับท้ายไม่มีเส้น ที่เหลือทึบถ้าผ่านมาแล้ว
+                const lineBefore = index === 0 ? 'bg-transparent' : barColor(done)
+                const lineAfter =
+                  index === steps.length - 1 ? 'bg-transparent' : barColor(index < current)
                 return (
                   <li key={step.status} className="flex flex-1 flex-col items-center">
                     <div className="flex w-full items-center">
                       <span
-                        className={`h-0.5 flex-1 ${
-                          index === 0
-                            ? 'bg-transparent'
-                            : index <= current
-                              ? 'bg-brand-300'
-                              : 'bg-gray-200'
-                        }`}
+                        className={`h-0.5 flex-1 ${lineBefore}`}
                       />
                       <span
                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm md:text-base ${
@@ -98,13 +99,7 @@ export function CustomerStatusPage() {
                         {step.icon}
                       </span>
                       <span
-                        className={`h-0.5 flex-1 ${
-                          index === steps.length - 1
-                            ? 'bg-transparent'
-                            : index < current
-                              ? 'bg-brand-300'
-                              : 'bg-gray-200'
-                        }`}
+                        className={`h-0.5 flex-1 ${lineAfter}`}
                       />
                     </div>
                     <span

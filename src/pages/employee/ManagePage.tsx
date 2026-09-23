@@ -1,4 +1,5 @@
 import { FoodImage } from '@/components/ui/FoodImage'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorNote } from '@/components/ui/ErrorNote'
 import {
   useCategories,
@@ -32,6 +33,8 @@ export function ManagePage() {
   const [categoryId, setCategoryId] = useState('')
   /** null = ปิดฟอร์ม, 'new' = เพิ่มใหม่, object = แก้ไขเมนูนั้น */
   const [editing, setEditing] = useState<MenuItem | 'new' | null>(null)
+  /** เมนูที่กำลังถามยืนยันว่าจะลบ — null = ไม่มีกล่องเปิดอยู่ */
+  const [deleting, setDeleting] = useState<MenuItem | null>(null)
 
   const visible = useMemo(() => {
     const keyword = search.trim().toLowerCase()
@@ -190,11 +193,7 @@ export function ManagePage() {
                     <button
                       type="button"
                       disabled={deleteItem.isPending}
-                      onClick={() => {
-                        if (confirm(`ลบเมนู "${item.name}" ?`)) {
-                          deleteItem.mutate(item.id)
-                        }
-                      }}
+                      onClick={() => setDeleting(item)}
                       className="rounded-lg border-2 border-danger py-1.5 text-xs font-bold text-danger transition hover:bg-danger/10 disabled:opacity-60"
                     >
                       ลบ
@@ -237,6 +236,25 @@ export function ManagePage() {
               { id: editing.id, input },
               { onSuccess: () => setEditing(null) },
             )
+          }
+        />
+      )}
+
+      {deleting && (
+        <ConfirmDialog
+          title="ลบเมนู"
+          subject={deleting.name}
+          detail={formatBaht(deleting.price)}
+          consequence="ถ้าเมนูนี้เคยถูกสั่งไปแล้วจะลบไม่ได้ — ให้ปิดสวิตช์ 'พร้อมจำหน่าย' แทนเพื่อซ่อนจากลูกค้า"
+          confirmLabel="ลบเมนู"
+          pendingLabel="กำลังลบ..."
+          isPending={deleteItem.isPending}
+          error={deleteItem.error}
+          onCancel={() => setDeleting(null)}
+          onConfirm={() =>
+            deleteItem.mutate(deleting.id, {
+              onSuccess: () => setDeleting(null),
+            })
           }
         />
       )}
