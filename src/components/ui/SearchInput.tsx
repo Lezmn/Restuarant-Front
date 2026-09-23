@@ -20,7 +20,7 @@ export function SearchInput({
         stroke="currentColor"
         strokeWidth="2"
         aria-hidden
-        className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-field-text"
+        className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-field-text md:h-6 md:w-6"
       >
         <circle cx="11" cy="11" r="7" />
         <path d="m20 20-3.5-3.5" strokeLinecap="round" />
@@ -31,7 +31,7 @@ export function SearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-brand-500 bg-field py-3 pr-4 pl-12 text-sm font-bold text-field-text shadow-md outline-none placeholder:font-bold placeholder:text-field-text focus:border-brand-300"
+        className="w-full rounded-xl border border-brand-500 bg-field py-3 pr-4 pl-12 text-sm font-bold text-field-text shadow-md outline-none placeholder:font-bold placeholder:text-field-text focus:border-brand-300 md:py-4 md:pl-14 md:text-base"
       />
     </label>
   )

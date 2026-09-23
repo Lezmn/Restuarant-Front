@@ -33,6 +33,19 @@ export interface MenuOption {
   /** PROTEIN / EXTRA — หน้าจัดการใช้แสดง/แก้กลุ่ม ส่วนหน้าลูกค้าใช้ optionGroups ที่จับกลุ่มแล้ว */
   group: MenuOptionGroupKind
   isAvailable: boolean
+  /** วัตถุดิบที่ผูกไว้ (null = ไม่ผูก) — ถ้าวัตถุดิบหมด ตัวเลือกนี้ก็สั่งไม่ได้ */
+  ingredientId: Id | null
+  ingredientName: string | null
+  /** วัตถุดิบหมดอยู่หรือเปล่า — ใช้บอกในหน้าจัดการว่าทำไมตัวเลือกนี้สั่งไม่ได้ */
+  ingredientOutOfStock: boolean
+}
+
+/** วัตถุดิบกลางของร้าน — ผูกกับตัวเลือกเมนูได้หลายอัน ปิดทีเดียวหมดทุกเมนู */
+export interface Ingredient {
+  id: Id
+  name: string
+  isAvailable: boolean
+  menuOptionCount: number
 }
 
 // ตัวเลือกแยกเป็น 2 แบบ: "เนื้อสัตว์" (group=PROTEIN) เลือกได้อันเดียว (radio)

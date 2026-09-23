@@ -1,12 +1,18 @@
 import { ErrorNote } from '@/components/ui/ErrorNote'
+import { Modal } from '@/components/ui/Modal'
 import { Pagination } from '@/components/ui/Pagination'
 import { StatCard } from '@/components/ui/StatCard'
-import { useAddExpense } from '@/features/expenses/hooks'
+import {
+  useAddExpense,
+  useDeleteExpense,
+  useUpdateExpense,
+} from '@/features/expenses/hooks'
 import { currentMonth } from '@/features/reports/api'
 import { useFinance } from '@/features/reports/hooks'
 import { formatBaht } from '@/lib/format'
 import { usePagination } from '@/lib/use-pagination'
 import { ExpenseCategory, PaymentMethod } from '@/types/enums'
+import type { Transaction } from '@/types/reports'
 import { useMemo, useState } from 'react'
 
 /** ป้ายหมวดในตาราง — รายรับใช้วิธีจ่าย รายจ่ายใช้หมวดรายจ่าย */
@@ -50,9 +56,12 @@ const thaiDate = (iso: string) =>
 export function FinancePage() {
   const [month, setMonth] = useState(currentMonth)
   const { data, isPending, isError, error } = useFinance(month)
-  const addExpense = useAddExpense()
+  const deleteExpense = useDeleteExpense()
   const [filter, setFilter] = useState<Filter>('ALL')
   const [formOpen, setFormOpen] = useState(false)
+  /** รายจ่ายที่กำลังแก้ไข / กำลังจะลบ (รายรับมาจากบิล แก้ที่นี่ไม่ได้) */
+  const [editing, setEditing] = useState<Transaction | null>(null)
+  const [deleting, setDeleting] = useState<Transaction | null>(null)
 
   const transactions = useMemo(() => {
     const list = data?.transactions ?? []
@@ -101,7 +110,7 @@ export function FinancePage() {
         </div>
       </div>
 
-      <ErrorNote error={addExpense.error} />
+      <ErrorNote error={deleteExpense.error} />
 
       {formOpen && <ExpenseForm onDone={() => setFormOpen(false)} />}
 
@@ -176,12 +185,13 @@ export function FinancePage() {
                 <th className="px-4 py-3 font-semibold">รายละเอียด</th>
                 <th className="px-4 py-3 font-semibold">หมวดหมู่</th>
                 <th className="px-4 py-3 text-right font-semibold">จำนวนเงิน</th>
+                <th className="px-4 py-3 text-center font-semibold">จัดการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {transactions.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-10 text-center text-sm text-gray-400">
+                  <td colSpan={5} className="py-10 text-center text-sm text-gray-400">
                     ไม่มีรายการในหมวดนี้
                   </td>
                 </tr>
@@ -208,6 +218,32 @@ export function FinancePage() {
                     {tx.amount < 0 ? '-' : '+'}
                     {formatBaht(Math.abs(tx.amount))}
                   </td>
+                  <td className="px-4 py-3 text-center">
+                    {/* รายรับมาจากบิลที่เก็บเงินไปแล้ว แก้ที่นี่ไม่ได้ — ต้องไปยกเลิกบิลที่หน้า Check */}
+                    {tx.type === 'EXPENSE' ? (
+                      <div className="flex items-center justify-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormOpen(false)
+                            setEditing(tx)
+                          }}
+                          className="text-sm font-semibold text-brand-400 underline-offset-4 transition hover:underline"
+                        >
+                          แก้ไข
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleting(tx)}
+                          className="text-sm font-semibold text-danger underline-offset-4 transition hover:underline"
+                        >
+                          ลบ
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">รายรับจากบิล</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -223,17 +259,98 @@ export function FinancePage() {
           onChange={paged.setPage}
         />
       </section>
+
+      {editing && (
+        <Modal title="แก้ไขรายจ่าย" onClose={() => setEditing(null)}>
+          <ExpenseForm expense={editing} onDone={() => setEditing(null)} />
+        </Modal>
+      )}
+
+      {deleting && (
+        <ConfirmDeleteDialog
+          expense={deleting}
+          isDeleting={deleteExpense.isPending}
+          onCancel={() => setDeleting(null)}
+          onConfirm={() =>
+            deleteExpense.mutate(deleting.id, {
+              onSuccess: () => setDeleting(null),
+            })
+          }
+        />
+      )}
     </div>
   )
 }
 
-function ExpenseForm({ onDone }: { onDone: () => void }) {
-  const addExpense = useAddExpense()
-  const [detail, setDetail] = useState('')
-  const [category, setCategory] = useState<ExpenseCategory>(
-    ExpenseCategory.INGREDIENTS,
+/** ยืนยันก่อนลบ — ลบแล้วกู้คืนไม่ได้ ต้องเห็นว่ากำลังลบรายการไหน */
+function ConfirmDeleteDialog({
+  expense,
+  isDeleting,
+  onCancel,
+  onConfirm,
+}: {
+  expense: Transaction
+  isDeleting: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <Modal title="ลบรายจ่าย" onClose={onCancel}>
+      <div className="rounded-lg bg-danger/5 px-4 py-3 text-sm text-gray-700">
+        <p className="font-bold text-black">{expense.detail}</p>
+        <p className="mt-1 text-gray-500">
+          {thaiDate(expense.date)} · {categoryLabel[expense.category]}
+        </p>
+        <p className="mt-1 text-lg font-bold text-danger">
+          {formatBaht(Math.abs(expense.amount))}
+        </p>
+      </div>
+
+      <p className="mt-3 text-sm text-gray-600">
+        ลบแล้วกู้คืนไม่ได้ และยอดรายจ่ายของเดือนนี้จะเปลี่ยนตาม
+      </p>
+
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border-2 border-gray-300 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-50"
+        >
+          ยกเลิก
+        </button>
+        <button
+          type="button"
+          disabled={isDeleting}
+          onClick={onConfirm}
+          className="rounded-lg bg-danger py-2.5 text-sm font-bold text-white transition hover:brightness-95 disabled:opacity-60"
+        >
+          {isDeleting ? 'กำลังลบ...' : 'ลบรายการนี้'}
+        </button>
+      </div>
+    </Modal>
   )
-  const [amount, setAmount] = useState('')
+}
+
+/** ฟอร์มเดียวใช้ทั้งเพิ่มและแก้ไข ต่างแค่ค่าเริ่มต้นกับ endpoint ที่ยิง */
+function ExpenseForm({
+  expense,
+  onDone,
+}: {
+  /** ไม่ส่งมา = โหมดเพิ่มรายจ่ายใหม่ */
+  expense?: Transaction
+  onDone: () => void
+}) {
+  const addExpense = useAddExpense()
+  const updateExpense = useUpdateExpense()
+  const saving = expense ? updateExpense : addExpense
+
+  const [detail, setDetail] = useState(expense?.detail ?? '')
+  const [category, setCategory] = useState<ExpenseCategory>(
+    (expense?.category as ExpenseCategory) ?? ExpenseCategory.INGREDIENTS,
+  )
+  const [amount, setAmount] = useState(
+    expense ? String(Math.abs(expense.amount)) : '',
+  )
   const [invalid, setInvalid] = useState('')
 
   const amountNum = Number(amount)
@@ -253,10 +370,15 @@ function ExpenseForm({ onDone }: { onDone: () => void }) {
         setInvalid(problem)
         if (problem) return
 
-        addExpense.mutate(
-          { detail: detail.trim(), category, amount: amountNum },
-          { onSuccess: onDone },
-        )
+        const input = { detail: detail.trim(), category, amount: amountNum }
+        if (expense) {
+          updateExpense.mutate(
+            { id: expense.id, input },
+            { onSuccess: onDone },
+          )
+        } else {
+          addExpense.mutate(input, { onSuccess: onDone })
+        }
       }}
       className="grid gap-3 rounded-xl border-2 border-danger/40 bg-danger/5 p-4 sm:grid-cols-4"
     >
@@ -297,20 +419,36 @@ function ExpenseForm({ onDone }: { onDone: () => void }) {
         />
       </label>
 
-      {invalid && (
+      {(invalid || saving.error) && (
         <p role="alert" className="text-sm font-semibold text-danger sm:col-span-4">
-          {invalid}
+          {invalid ||
+            (saving.error instanceof Error
+              ? saving.error.message
+              : 'บันทึกไม่สำเร็จ')}
         </p>
       )}
 
-      <div className="sm:col-span-4">
+      <div className="flex gap-3 sm:col-span-4">
         <button
           type="submit"
-          disabled={addExpense.isPending}
+          disabled={saving.isPending}
           className="rounded-lg bg-danger px-6 py-2 text-sm font-bold text-white disabled:opacity-60"
         >
-          {addExpense.isPending ? 'กำลังบันทึก...' : 'บันทึกรายจ่าย'}
+          {saving.isPending
+            ? 'กำลังบันทึก...'
+            : expense
+              ? 'บันทึกการแก้ไข'
+              : 'บันทึกรายจ่าย'}
         </button>
+        {expense && (
+          <button
+            type="button"
+            onClick={onDone}
+            className="rounded-lg border-2 border-gray-300 px-6 py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-50"
+          >
+            ยกเลิก
+          </button>
+        )}
       </div>
     </form>
   )

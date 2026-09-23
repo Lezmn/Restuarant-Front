@@ -74,6 +74,9 @@ const OPTION_GROUPS: {
 ]
 
 const mapMenuOption = (o: ApiMenuOption): MenuOption => ({
+  ingredientId: o.ingredientId ?? o.ingredient?.id ?? null,
+  ingredientName: o.ingredient?.name ?? null,
+  ingredientOutOfStock: o.ingredient ? !o.ingredient.isAvailable : false,
   id: o.id,
   name: o.name,
   price: o.price,

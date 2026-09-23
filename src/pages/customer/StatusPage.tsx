@@ -24,7 +24,7 @@ export function CustomerStatusPage() {
   const { data: orders, isPending } = useSessionOrders(token)
   const callStaff = useCallStaff()
 
-  if (isPending) return <p className="text-sm text-gray-500">กำลังโหลด...</p>
+  if (isPending) return <p className="text-sm md:text-base text-gray-500">กำลังโหลด...</p>
 
   const latest = orders?.[0]
   // ยกเลิกใบไหนก็ต้องบอก ไม่ใช่เฉพาะใบล่าสุด — ลูกค้าจะได้ไม่นั่งรอของที่ไม่มีวันมา
@@ -34,18 +34,18 @@ export function CustomerStatusPage() {
 
   return (
     <div className="lg:mx-auto lg:max-w-2xl">
-      <h1 className="text-lg font-bold text-gray-900">ติดตามสถานะออเดอร์</h1>
-      <p className="text-sm text-gray-500">
+      <h1 className="text-lg md:text-xl font-bold text-gray-900">ติดตามสถานะออเดอร์</h1>
+      <p className="text-sm md:text-base text-gray-500">
         {session ? `โต๊ะ ${session.tableName} : ` : ''}
         ทั้งหมด {orders?.length ?? 0} รายการ
       </p>
 
       {!latest ? (
         <div className="mt-6 rounded-2xl border-2 border-brand-75 bg-white px-4 py-10 text-center">
-          <p className="text-sm text-gray-500">ไม่มีออเดอร์</p>
+          <p className="text-sm md:text-base text-gray-500">ไม่มีออเดอร์</p>
           <Link
             to={`/t/${token}`}
-            className="mt-4 inline-block rounded-full bg-brand-300 px-6 py-2.5 text-sm font-bold text-white"
+            className="mt-4 inline-block rounded-full bg-brand-300 px-6 py-2.5 text-sm md:text-base font-bold text-white"
           >
             เลือกเมนู
           </Link>
@@ -62,7 +62,7 @@ export function CustomerStatusPage() {
                 ออเดอร์ {cancelled.map((o) => `#${o.orderRef}`).join(', ')}{' '}
                 ถูกยกเลิก
               </p>
-              <p className="mt-1 text-sm text-gray-600">
+              <p className="mt-1 text-sm md:text-base text-gray-600">
                 ทางร้านยกเลิกให้แล้ว และจะไม่คิดเงินรายการนี้
                 หากมีข้อสงสัยกรุณากดเรียกพนักงาน
               </p>
@@ -89,7 +89,7 @@ export function CustomerStatusPage() {
                         }`}
                       />
                       <span
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm ${
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm md:text-base ${
                           done
                             ? 'bg-brand-300 text-white'
                             : 'bg-gray-100 text-gray-400'
@@ -108,7 +108,7 @@ export function CustomerStatusPage() {
                       />
                     </div>
                     <span
-                      className={`mt-2 text-center text-xs ${
+                      className={`mt-2 text-center text-xs md:text-sm ${
                         done ? 'font-semibold text-gray-900' : 'text-gray-400'
                       }`}
                     >
@@ -121,12 +121,12 @@ export function CustomerStatusPage() {
 
             {latest.status !== OrderStatus.SERVED && (
               <div className="mt-5 flex items-center justify-center gap-3 border-t border-brand-75 pt-4">
-                <span aria-hidden className="text-2xl">
+                <span aria-hidden className="text-2xl md:text-3xl">
                   ⏱
                 </span>
                 <div className="text-center">
-                  <p className="text-sm text-gray-600">คาดว่าจะได้รับในอีก</p>
-                  <p className="text-xl font-bold text-brand-400">
+                  <p className="text-sm md:text-base text-gray-600">คาดว่าจะได้รับในอีก</p>
+                  <p className="text-xl md:text-2xl font-bold text-brand-400">
                     10 - 15 นาที
                   </p>
                 </div>
@@ -139,19 +139,19 @@ export function CustomerStatusPage() {
             type="button"
             disabled={callStaff.isPending || callStaff.isSuccess}
             onClick={() => callStaff.mutate({ token: token as string })}
-            className="mt-4 w-full rounded-xl border-2 border-brand-400 py-3 text-sm font-bold text-brand-400 transition disabled:opacity-60"
+            className="mt-4 w-full rounded-xl border-2 border-brand-400 py-3 text-sm md:text-base font-bold text-brand-400 transition disabled:opacity-60"
           >
             📞 เรียกพนักงานเพื่อสอบถาม
           </button>
 
           {callStaff.isSuccess && (
-            <p className="mt-4 rounded-xl bg-success/10 py-3 text-center text-sm font-semibold text-success">
+            <p className="mt-4 rounded-xl bg-success/10 py-3 text-center text-sm md:text-base font-semibold text-success">
               กรุณารอพนักงานสักครู่
             </p>
           )}
 
           {/* รายการทั้งหมด */}
-          <h2 className="mt-6 text-sm font-semibold text-gray-700">
+          <h2 className="mt-6 text-sm md:text-base font-semibold text-gray-700">
             รายการทั้งหมด
           </h2>
           <div className="mt-2 space-y-3">
@@ -168,11 +168,11 @@ export function CustomerStatusPage() {
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-gray-900">
+                  <p className="text-sm md:text-base font-semibold text-gray-900">
                     ออเดอร์ #{order.orderRef}
                   </p>
                   {cancelled && (
-                    <span className="rounded-full bg-danger/15 px-2.5 py-0.5 text-xs font-bold text-danger">
+                    <span className="rounded-full bg-danger/15 px-2.5 py-0.5 text-xs md:text-sm font-bold text-danger">
                       ยกเลิกแล้ว
                     </span>
                   )}
@@ -181,7 +181,7 @@ export function CustomerStatusPage() {
                   {order.items.map((item) => (
                     <li
                       key={item.id}
-                      className="flex justify-between gap-3 text-sm"
+                      className="flex justify-between gap-3 text-sm md:text-base"
                     >
                       <span className="min-w-0 text-gray-700">
                         {item.quantity}× {item.menuItemName}
@@ -192,7 +192,7 @@ export function CustomerStatusPage() {
                           </span>
                         )}
                         {item.note && (
-                          <span className="block text-xs text-brand-400">
+                          <span className="block text-xs md:text-sm text-brand-400">
                             {item.note}
                           </span>
                         )}
@@ -203,7 +203,7 @@ export function CustomerStatusPage() {
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 border-t border-brand-75 pt-2 text-right text-sm font-bold">
+                <p className="mt-2 border-t border-brand-75 pt-2 text-right text-sm md:text-base font-bold">
                   {cancelled ? (
                     <>
                       <span className="text-gray-400 line-through">

@@ -60,6 +60,8 @@ export async function deleteMenuItem(id: Id): Promise<void> {
 // ===== ตัวเลือกของเมนู (หมู/ไก่/ไข่ดาว) — ทุก endpoint ต้องเป็น ADMIN =====
 
 export interface MenuOptionInput {
+  /** ผูกกับวัตถุดิบกลาง (null = ไม่ผูก) */
+  ingredientId?: Id | null
   name: string
   price: number
   group: MenuOptionGroupKind

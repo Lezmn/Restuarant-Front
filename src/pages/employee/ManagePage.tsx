@@ -10,6 +10,7 @@ import {
   useUpdateMenuItem,
 } from '@/features/menu/hooks'
 import type { MenuItem } from '@/types/models'
+import { IngredientsPanel } from './IngredientsPanel'
 import { MenuFormDialog } from './MenuFormDialog'
 import { formatBaht } from '@/lib/format'
 import { useMemo, useState } from 'react'
@@ -118,11 +119,7 @@ export function ManagePage() {
       )}
 
       {tab === 'ingredient' ? (
-        <div className="mt-6 rounded-xl border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500">
-          ยังทำไม่ได้ — backend ยังไม่มี model วัตถุดิบ
-          <br />
-          ต้องเพิ่ม Ingredient model ใน prisma schema ก่อน
-        </div>
+        <IngredientsPanel />
       ) : (
         <>
           {isPending && (
