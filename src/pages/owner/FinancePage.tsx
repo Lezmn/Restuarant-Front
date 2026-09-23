@@ -353,6 +353,9 @@ function ExpenseForm({
   )
   const [invalid, setInvalid] = useState('')
 
+  let submitLabel = expense ? 'บันทึกการแก้ไข' : 'บันทึกรายจ่าย'
+  if (saving.isPending) submitLabel = 'กำลังบันทึก...'
+
   const amountNum = Number(amount)
   const validate = () => {
     if (!detail.trim()) return 'กรุณากรอกรายละเอียด'
@@ -434,11 +437,7 @@ function ExpenseForm({
           disabled={saving.isPending}
           className="rounded-lg bg-danger px-6 py-2 text-sm font-bold text-white disabled:opacity-60"
         >
-          {saving.isPending
-            ? 'กำลังบันทึก...'
-            : expense
-              ? 'บันทึกการแก้ไข'
-              : 'บันทึกรายจ่าย'}
+          {submitLabel}
         </button>
         {expense && (
           <button

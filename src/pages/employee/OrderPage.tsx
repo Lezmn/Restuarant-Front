@@ -3,10 +3,11 @@ import {
   useOrders,
   useUpdateOrderStatus,
 } from '@/features/orders/hooks'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorNote } from '@/components/ui/ErrorNote'
 import { LIVE_POLL_MS } from '@/lib/live'
 import { OrderStatus } from '@/types/enums'
-import type { Order } from '@/types/models'
+import type { Order, OrderItem } from '@/types/models'
 import { useState } from 'react'
 
 // socket สั่ง refetch ให้อยู่แล้ว — poll นี้เป็นตัวสำรองตอน socket หลุด
@@ -16,6 +17,57 @@ const waitedMinutes = (iso: string) =>
   Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000))
 
 type ColumnKey = 'queue' | 'cooking' | 'done'
+
+/**
+ * หนึ่งรายการอาหารในการ์ดออเดอร์ — แยกออกมาจาก JSX ของหน้า
+ * เพราะเดิมซ้อนกันถึง 6 ชั้น (map > map > JSX > onChange > setState updater) อ่านยาก
+ * และทำให้ทั้งคอลัมน์ re-render ใหม่ทุกครั้งที่ติ๊กช่องเดียว
+ */
+function KitchenItemRow({
+  item,
+  columnKey,
+  checked,
+  onToggle,
+}: Readonly<{
+  item: OrderItem
+  columnKey: ColumnKey
+  checked: boolean
+  onToggle: (checked: boolean) => void
+}>) {
+  return (
+    <li
+      className={`rounded-lg border border-gray-200 px-3 py-2 ${
+        columnKey === 'done' ? 'text-gray-400' : ''
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm">
+          <span className="font-bold">{item.quantity}</span> {item.menuItemName}
+          {item.optionNames.length > 0 && (
+            <span className="text-gray-500"> ({item.optionNames.join(', ')})</span>
+          )}
+        </span>
+
+        {columnKey === 'cooking' && (
+          <input
+            type="checkbox"
+            aria-label={`ทำ ${item.menuItemName} แล้ว`}
+            checked={checked}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="h-5 w-5 shrink-0 accent-brand-300"
+          />
+        )}
+      </div>
+
+      {item.note && columnKey !== 'done' && (
+        <p className="mt-0.5 flex items-center gap-1 text-sm text-status-queue">
+          <span className="h-1.5 w-1.5 rounded-full bg-status-queue" />
+          {item.note}
+        </p>
+      )}
+    </li>
+  )
+}
 
 const columns: {
   key: ColumnKey
@@ -66,11 +118,18 @@ export function OrderPage() {
 
   // ติ๊กรายอาหารว่าทำแล้ว — เป็นตัวช่วยของครัว ไม่ได้ส่งขึ้น backend
   const [checked, setChecked] = useState<Record<string, boolean>>({})
+  /** ออเดอร์ที่กำลังถามยืนยันว่าจะยกเลิก — null = ไม่มีกล่องเปิดอยู่ */
+  const [cancelling, setCancelling] = useState<Order | null>(null)
 
   // เคลียร์แล้วเก็บไว้ที่ backend (clearedAt) ไม่ใช่ใน state
   // ไม่งั้นรีเฟรชก็กลับมา จอครัวอีกเครื่องก็ยังเห็น และพอแคชเชียร์ยกเลิกบิล
   // ออเดอร์ที่เสิร์ฟไปนานแล้วจะเด้งกลับขึ้นบอร์ดเหมือนมีของต้องทำใหม่
   const visible = (orders ?? []).filter((o) => !o.clearedAt)
+
+  const toggleItem = (itemId: string, isChecked: boolean) => {
+    setChecked((prev) => ({ ...prev, [itemId]: isChecked }))
+  }
+
 
   const handleAdvance = (order: Order, key: ColumnKey) => {
     if (key === 'queue') {
@@ -134,47 +193,13 @@ export function OrderPage() {
 
                     <ul className="mt-2 space-y-2">
                       {order.items.map((item) => (
-                        <li
+                        <KitchenItemRow
                           key={item.id}
-                          className={`rounded-lg border border-gray-200 px-3 py-2 ${
-                            column.key === 'done' ? 'text-gray-400' : ''
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm">
-                              <span className="font-bold">{item.quantity}</span>{' '}
-                              {item.menuItemName}
-                              {item.optionNames.length > 0 && (
-                                <span className="text-gray-500">
-                                  {' '}
-                                  ({item.optionNames.join(', ')})
-                                </span>
-                              )}
-                            </span>
-
-                            {column.key === 'cooking' && (
-                              <input
-                                type="checkbox"
-                                aria-label={`ทำ ${item.menuItemName} แล้ว`}
-                                checked={Boolean(checked[item.id])}
-                                onChange={(e) =>
-                                  setChecked((prev) => ({
-                                    ...prev,
-                                    [item.id]: e.target.checked,
-                                  }))
-                                }
-                                className="h-5 w-5 shrink-0 accent-brand-300"
-                              />
-                            )}
-                          </div>
-
-                          {item.note && column.key !== 'done' && (
-                            <p className="mt-0.5 flex items-center gap-1 text-sm text-status-queue">
-                              <span className="h-1.5 w-1.5 rounded-full bg-status-queue" />
-                              {item.note}
-                            </p>
-                          )}
-                        </li>
+                          item={item}
+                          columnKey={column.key}
+                          checked={Boolean(checked[item.id])}
+                          onToggle={(isChecked) => toggleItem(item.id, isChecked)}
+                        />
                       ))}
                     </ul>
 
@@ -190,18 +215,7 @@ export function OrderPage() {
                     <button
                       type="button"
                       disabled={updateStatus.isPending}
-                      onClick={() => {
-                        if (
-                          confirm(
-                            `ยกเลิกออเดอร์ #${order.orderRef} โต๊ะ ${order.tableName} ?`,
-                          )
-                        ) {
-                          updateStatus.mutate({
-                            id: order.id,
-                            status: OrderStatus.CANCELLED,
-                          })
-                        }
-                      }}
+                      onClick={() => setCancelling(order)}
                       className="mt-2 w-full rounded-lg border border-gray-300 py-2 text-xs font-semibold text-gray-600 transition hover:border-danger hover:text-danger disabled:opacity-60"
                     >
                       ยกเลิกออเดอร์
@@ -214,6 +228,25 @@ export function OrderPage() {
         })}
       </div>
 
+      {cancelling && (
+        <ConfirmDialog
+          title="ยกเลิกออเดอร์"
+          subject={`ออเดอร์ #${cancelling.orderRef}`}
+          detail={`โต๊ะ ${cancelling.tableName} · ${cancelling.items.length} รายการ`}
+          consequence="ออเดอร์นี้จะไม่ถูกคิดเงิน และลูกค้าจะเห็นว่าถูกยกเลิกทันที"
+          confirmLabel="ยกเลิกออเดอร์"
+          pendingLabel="กำลังยกเลิก..."
+          isPending={updateStatus.isPending}
+          error={updateStatus.error}
+          onCancel={() => setCancelling(null)}
+          onConfirm={() =>
+            updateStatus.mutate(
+              { id: cancelling.id, status: OrderStatus.CANCELLED },
+              { onSuccess: () => setCancelling(null) },
+            )
+          }
+        />
+      )}
     </div>
   )
 }

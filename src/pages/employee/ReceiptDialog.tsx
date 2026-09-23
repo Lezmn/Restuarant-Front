@@ -37,7 +37,7 @@ export function ReceiptDialog({
 
   return (
     <Modal title="ใบเสร็จรับเงิน" onClose={onClose}>
-      <div className="print-area w-full">
+      <div className="print-area print-receipt w-full">
         <div className="text-center">
           <p className="text-lg font-bold text-black">{RESTAURANT_NAME}</p>
           <p className="mt-1 text-sm text-gray-600">
