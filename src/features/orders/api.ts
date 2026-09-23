@@ -4,12 +4,15 @@ import type { ApiOrder } from '@/types/api'
 import type { OrderStatus } from '@/types/enums'
 import type { Id, Order } from '@/types/models'
 
-/** GET /orders — ทุก role ที่ login แล้วดูได้ */
+/**
+ * GET /orders — ทุก role ที่ login แล้วดูได้
+ * เรียงเก่า → ใหม่ ให้ครัวทำตามลำดับที่ลูกค้าสั่งจริง (ใบที่รอนานสุดอยู่บนสุด)
+ */
 export async function getOrders(): Promise<Order[]> {
   const data = await apiClient<ApiOrder[]>('/orders')
   return data
     .map(mapOrder)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 }
 
 /** PATCH /orders/:id/status @Roles(ADMIN, KITCHEN) — backend คุมลำดับสถานะให้เอง */
@@ -20,6 +23,17 @@ export async function updateOrderStatus(vars: {
   const data = await apiClient<ApiOrder>(`/orders/${vars.id}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status: vars.status }),
+  })
+  return mapOrder(data)
+}
+
+/**
+ * PATCH /orders/:id/clear @Roles(ADMIN, KITCHEN)
+ * ครัวยกของให้ลูกค้าแล้ว — เอาออกจากบอร์ดถาวร (ออเดอร์ยังอยู่ในบิลรอเก็บเงิน)
+ */
+export async function clearOrder(id: Id): Promise<Order> {
+  const data = await apiClient<ApiOrder>(`/orders/${id}/clear`, {
+    method: 'PATCH',
   })
   return mapOrder(data)
 }

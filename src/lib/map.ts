@@ -103,7 +103,6 @@ export const mapMenuItem = (m: ApiMenuItem): MenuItem => ({
   id: m.id,
   categoryId: m.categoryId,
   name: m.name,
-  description: m.description,
   price: m.price,
   imageUrl: m.imageUrl,
   isAvailable: m.isAvailable,
@@ -117,6 +116,7 @@ export const mapOrder = (o: ApiOrder): Order => ({
   tableName: tableName(o.table),
   status: o.status,
   createdAt: o.createdAt,
+  clearedAt: o.clearedAt ?? null,
   items: o.items.map((item) => ({
     id: item.id,
     menuItemId: item.menuItemId ?? '',

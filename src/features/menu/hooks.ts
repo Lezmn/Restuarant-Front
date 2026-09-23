@@ -1,7 +1,6 @@
 import type { Id } from '@/types/models'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  createCategory,
   createMenuItem,
   createMenuOption,
   deleteMenuItem,
@@ -32,19 +31,6 @@ export const useMenuItem = (id: Id | undefined) =>
     queryFn: () => getMenuItem(id as Id),
     enabled: Boolean(id),
   })
-
-/** หมวดใหม่ต้องโผล่ทั้งฝั่งจัดการและหน้าลูกค้า (/public/menu จัดกลุ่มตามหมวด) */
-export function useCreateCategory() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: createCategory,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: menuKeys.categories })
-      qc.invalidateQueries({ queryKey: ['public', 'menu'] })
-      qc.invalidateQueries({ queryKey: ['public', 'categories'] })
-    },
-  })
-}
 
 export function useSetMenuItemAvailability() {
   const qc = useQueryClient()

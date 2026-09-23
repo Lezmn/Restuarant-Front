@@ -1,11 +1,13 @@
 import { ErrorNote } from '@/components/ui/ErrorNote'
 import { Modal } from '@/components/ui/Modal'
+import { Pagination } from '@/components/ui/Pagination'
 import {
   usePayment,
   usePayments,
   useVoidPayment,
 } from '@/features/payments/hooks'
 import { formatBaht, formatTime } from '@/lib/format'
+import { usePagination } from '@/lib/use-pagination'
 import { PaymentMethod, PaymentStatus } from '@/types/enums'
 import type { Id, Payment } from '@/types/models'
 import { ReceiptDialog } from './ReceiptDialog'
@@ -13,14 +15,12 @@ import { useState } from 'react'
 
 const methodLabel: Record<string, string> = {
   [PaymentMethod.CASH]: 'เงินสด',
-  [PaymentMethod.CARD]: 'บัตร',
   [PaymentMethod.PROMPTPAY]: 'PromptPay',
 }
 
 // สีเดียวกับตารางโต๊ะด้านบน: PromptPay/บัตร = ฟ้า, เงินสด = ส้ม
 const methodColor: Record<string, string> = {
   [PaymentMethod.CASH]: 'text-brand-300',
-  [PaymentMethod.CARD]: 'text-promptpay',
   [PaymentMethod.PROMPTPAY]: 'text-promptpay',
 }
 
@@ -42,6 +42,8 @@ export function PaidBills() {
   const { data: viewing } = usePayment(viewId ?? undefined)
 
   const today = (payments ?? []).filter((p) => isToday(p.paidAt))
+  // วันที่ขายดีจะมีหลายสิบบิล ตัดเป็นหน้า ๆ ไม่งั้นตารางยาวจนหาโต๊ะด้านบนไม่เจอ
+  const paged = usePagination(today)
 
   return (
     <section className="mt-8">
@@ -79,7 +81,7 @@ export function PaidBills() {
               </tr>
             )}
 
-            {today.map((p) => {
+            {paged.pageItems.map((p) => {
               const voided = p.status === PaymentStatus.VOIDED
               return (
                 <tr
@@ -158,6 +160,16 @@ export function PaidBills() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={paged.page}
+        totalPages={paged.totalPages}
+        from={paged.from}
+        to={paged.to}
+        total={paged.total}
+        onChange={paged.setPage}
+        unit="บิล"
+      />
 
       {viewing && viewing.id === viewId && (
         <ReceiptDialog payment={viewing} onClose={() => setViewId(null)} />

@@ -22,10 +22,7 @@ export function CustomerMenuPage() {
     const keyword = search.trim().toLowerCase()
     return (items ?? []).filter((item) => {
       const matchCategory = !categoryId || item.categoryId === categoryId
-      const matchSearch =
-        !keyword ||
-        item.name.toLowerCase().includes(keyword) ||
-        (item.description ?? '').toLowerCase().includes(keyword)
+      const matchSearch = !keyword || item.name.toLowerCase().includes(keyword)
       return matchCategory && matchSearch
     })
   }, [items, search, categoryId])

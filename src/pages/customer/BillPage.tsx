@@ -5,7 +5,7 @@ import {
 } from '@/features/public/hooks'
 import { formatBaht } from '@/lib/format'
 import { itemTotal, orderTotal } from '@/features/orders/order-total'
-import { PaymentMethod } from '@/types/enums'
+import { OrderStatus, PaymentMethod } from '@/types/enums'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
@@ -18,8 +18,13 @@ export function CustomerBillPage() {
 
   if (isPending) return <p className="text-sm text-gray-500">กำลังโหลด...</p>
 
-  const items = (orders ?? []).flatMap((o) => o.items)
-  const total = (orders ?? []).reduce((sum, o) => sum + orderTotal(o), 0)
+  // ออเดอร์ที่ครัวยกเลิกต้องไม่คิดเงิน — ยอดนี้ต้องตรงกับที่แคชเชียร์เก็บจริง
+  const billable = (orders ?? []).filter(
+    (o) => o.status !== OrderStatus.CANCELLED,
+  )
+  const cancelledCount = (orders ?? []).length - billable.length
+  const items = billable.flatMap((o) => o.items)
+  const total = billable.reduce((sum, o) => sum + orderTotal(o), 0)
 
   if (items.length === 0) {
     return (
@@ -64,6 +69,12 @@ export function CustomerBillPage() {
           </li>
         ))}
       </ul>
+
+      {cancelledCount > 0 && (
+        <p className="mt-3 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+          มี {cancelledCount} ออเดอร์ที่ถูกยกเลิก — ไม่ได้รวมอยู่ในยอดนี้
+        </p>
+      )}
 
       <div className="mt-4 flex items-center justify-between rounded-xl bg-brand-300 px-5 py-4 text-white shadow-md">
         <span className="text-lg font-bold">รวมสุทธิ</span>

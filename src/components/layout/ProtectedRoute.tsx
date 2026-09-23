@@ -6,7 +6,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 // หมายเหตุ: นี่ไม่ใช่ security จริง — ตัวจริงคือ RolesGuard ฝั่ง NestJS
 export function ProtectedRoute({
   roles,
-  loginPath = '/employee/login',
+  loginPath = '/login',
   fallbackPath = '/employee',
 }: {
   roles?: Role[]

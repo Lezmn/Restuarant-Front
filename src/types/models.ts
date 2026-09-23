@@ -50,7 +50,6 @@ export interface MenuItem {
   id: Id
   categoryId: Id
   name: string
-  description: string | null
   price: number
   imageUrl: string | null
   isAvailable: boolean
@@ -97,6 +96,8 @@ export interface Order {
   tableName: string
   status: OrderStatus
   createdAt: string
+  /** ครัวยกให้ลูกค้าแล้วเมื่อไหร่ — null = ยังอยู่บนบอร์ดครัว */
+  clearedAt: string | null
   items: OrderItem[]
 }
 

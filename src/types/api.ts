@@ -50,7 +50,6 @@ export interface ApiMenuOption {
 export interface ApiMenuItem {
   id: string
   name: string
-  description: string | null
   price: number
   imageUrl: string | null
   isAvailable: boolean
@@ -87,6 +86,8 @@ export interface ApiOrder {
   id: string
   status: OrderStatus
   createdAt: string
+  /** ครัวกดว่ายกให้ลูกค้าแล้ว — null = ยังอยู่บนบอร์ดครัว */
+  clearedAt?: string | null
   tableId?: string
   tableSessionId?: string | null
   table?: ApiTable

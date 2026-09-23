@@ -1,9 +1,11 @@
 import { ErrorNote } from '@/components/ui/ErrorNote'
+import { Pagination } from '@/components/ui/Pagination'
 import { StatCard } from '@/components/ui/StatCard'
 import { useAddExpense } from '@/features/expenses/hooks'
 import { currentMonth } from '@/features/reports/api'
 import { useFinance } from '@/features/reports/hooks'
 import { formatBaht } from '@/lib/format'
+import { usePagination } from '@/lib/use-pagination'
 import { ExpenseCategory, PaymentMethod } from '@/types/enums'
 import { useMemo, useState } from 'react'
 
@@ -11,7 +13,6 @@ import { useMemo, useState } from 'react'
 const categoryLabel: Record<PaymentMethod | ExpenseCategory, string> = {
   [PaymentMethod.CASH]: 'เงินสด',
   [PaymentMethod.PROMPTPAY]: 'PromptPay',
-  [PaymentMethod.CARD]: 'บัตร',
   [ExpenseCategory.INGREDIENTS]: 'วัตถุดิบ',
   [ExpenseCategory.UTILITIES]: 'ค่าน้ำค่าไฟ',
   [ExpenseCategory.SALARY]: 'เงินเดือน',
@@ -23,7 +24,6 @@ const categoryLabel: Record<PaymentMethod | ExpenseCategory, string> = {
 const categoryTone: Record<PaymentMethod | ExpenseCategory, string> = {
   [PaymentMethod.CASH]: 'bg-success/10 text-success',
   [PaymentMethod.PROMPTPAY]: 'bg-success/10 text-success',
-  [PaymentMethod.CARD]: 'bg-success/10 text-success',
   [ExpenseCategory.INGREDIENTS]: 'bg-danger/10 text-danger',
   [ExpenseCategory.UTILITIES]: 'bg-brand-50 text-brand-500',
   [ExpenseCategory.SALARY]: 'bg-brand-50 text-brand-500',
@@ -58,6 +58,9 @@ export function FinancePage() {
     const list = data?.transactions ?? []
     return filter === 'ALL' ? list : list.filter((t) => t.category === filter)
   }, [data, filter])
+
+  // ทั้งเดือนมีหลายสิบรายการ — ตัดเป็นหน้า ๆ (เปลี่ยนตัวกรองแล้ว usePagination clamp หน้าให้เอง)
+  const paged = usePagination(transactions)
 
   if (isPending) {
     return <p className="text-sm text-gray-500">กำลังโหลด...</p>
@@ -184,7 +187,7 @@ export function FinancePage() {
                 </tr>
               )}
 
-              {transactions.map((tx) => (
+              {paged.pageItems.map((tx) => (
                 <tr key={tx.id}>
                   <td className="px-4 py-3 text-sm text-gray-700">
                     {thaiDate(tx.date)}
@@ -210,6 +213,15 @@ export function FinancePage() {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          page={paged.page}
+          totalPages={paged.totalPages}
+          from={paged.from}
+          to={paged.to}
+          total={paged.total}
+          onChange={paged.setPage}
+        />
       </section>
     </div>
   )
@@ -222,13 +234,27 @@ function ExpenseForm({ onDone }: { onDone: () => void }) {
     ExpenseCategory.INGREDIENTS,
   )
   const [amount, setAmount] = useState('')
+  const [invalid, setInvalid] = useState('')
+
+  const amountNum = Number(amount)
+  const validate = () => {
+    if (!detail.trim()) return 'กรุณากรอกรายละเอียด'
+    if (amount.trim() === '' || !Number.isFinite(amountNum)) return 'กรุณากรอกจำนวนเงิน'
+    if (amountNum <= 0) return 'จำนวนเงินต้องมากกว่า 0'
+    return ''
+  }
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault()
+        // เช็คก่อนยิง ไม่งั้นได้ error 400 ดิบ ๆ จาก backend ซึ่งอ่านไม่รู้เรื่อง
+        const problem = validate()
+        setInvalid(problem)
+        if (problem) return
+
         addExpense.mutate(
-          { detail, category, amount: Number(amount) },
+          { detail: detail.trim(), category, amount: amountNum },
           { onSuccess: onDone },
         )
       }}
@@ -270,6 +296,12 @@ function ExpenseForm({ onDone }: { onDone: () => void }) {
           className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-brand-300"
         />
       </label>
+
+      {invalid && (
+        <p role="alert" className="text-sm font-semibold text-danger sm:col-span-4">
+          {invalid}
+        </p>
+      )}
 
       <div className="sm:col-span-4">
         <button

@@ -1,19 +1,19 @@
+import { Pagination } from '@/components/ui/Pagination'
 import { StatCard } from '@/components/ui/StatCard'
 import { TrendChart } from '@/components/ui/TrendChart'
 import { useDashboard } from '@/features/reports/hooks'
 import { formatBaht } from '@/lib/format'
+import { usePagination } from '@/lib/use-pagination'
 import { PaymentMethod } from '@/types/enums'
 
 const methodLabel: Record<PaymentMethod, string> = {
   [PaymentMethod.CASH]: 'จ่ายเงินสด',
   [PaymentMethod.PROMPTPAY]: 'จ่าย PromptPay',
-  [PaymentMethod.CARD]: 'จ่ายบัตร',
 }
 
 const methodIcon: Record<PaymentMethod, string> = {
   [PaymentMethod.CASH]: '💰',
   [PaymentMethod.PROMPTPAY]: '📱',
-  [PaymentMethod.CARD]: '💳',
 }
 
 const thaiDate = (iso: string) =>
@@ -28,6 +28,8 @@ const minutesSince = (iso: string) =>
 
 export function DashboardPage() {
   const { data, isPending, isError, error } = useDashboard()
+  // ต้องเรียก hook ก่อน early return เสมอ (กฎของ hooks) จึงอ่านจาก data?. ตรงนี้
+  const pagedNotifications = usePagination(data?.notifications ?? [])
 
   if (isPending) {
     return <p className="text-sm text-gray-500">กำลังโหลด...</p>
@@ -96,10 +98,6 @@ export function DashboardPage() {
               value={`${todayStatus.promptPayCount} บิล`}
             />
             <StatusRow
-              label="จ่ายบัตร"
-              value={`${todayStatus.cardCount} บิล`}
-            />
-            <StatusRow
               label="โต๊ะที่ใช้งานอยู่"
               value={`${todayStatus.tablesInUse}/${todayStatus.tablesTotal}`}
             />
@@ -122,7 +120,7 @@ export function DashboardPage() {
           </p>
         ) : (
           <ul className="divide-y divide-gray-200">
-            {notifications.map((note) => (
+            {pagedNotifications.pageItems.map((note) => (
               <li key={note.id} className="flex items-center gap-3 py-3">
                 <span aria-hidden className="text-xl">
                   {methodIcon[note.method]}
@@ -142,6 +140,16 @@ export function DashboardPage() {
             ))}
           </ul>
         )}
+
+        <Pagination
+          page={pagedNotifications.page}
+          totalPages={pagedNotifications.totalPages}
+          from={pagedNotifications.from}
+          to={pagedNotifications.to}
+          total={pagedNotifications.total}
+          onChange={pagedNotifications.setPage}
+          unit="บิล"
+        />
       </section>
     </div>
   )

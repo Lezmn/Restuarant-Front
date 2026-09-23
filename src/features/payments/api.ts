@@ -13,6 +13,8 @@ import type { Id, Payment } from '@/types/models'
 export async function createPayment(vars: {
   tableSessionId: Id
   method: PaymentMethod
+  /** ยอดที่เก็บจริง — ไม่ส่ง = เต็มบิล ส่วนต่างบันทึกเป็นส่วนลดในใบเสร็จ */
+  amount?: number
   /** POST /payments ไม่ได้ส่ง tableSession กลับมา จึงต้องส่งชื่อโต๊ะมาเติมในใบเสร็จเอง */
   tableName: string
   /** หมายเหตุตอนรับเงิน — backend เก็บลง payment + receipt */
@@ -23,6 +25,7 @@ export async function createPayment(vars: {
     body: JSON.stringify({
       tableSessionId: vars.tableSessionId,
       method: vars.method,
+      ...(vars.amount === undefined ? {} : { amount: vars.amount }),
       ...(vars.note ? { note: vars.note } : {}),
     }),
   })

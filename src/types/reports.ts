@@ -9,7 +9,6 @@ export interface DailySummary {
   netProfit: number
   cashTotal: number
   promptPayTotal: number
-  cardTotal: number
   orderCount: number
   paymentCount: number
 }
@@ -24,7 +23,6 @@ export interface RevenuePoint {
 export interface TodayStatus {
   cashCount: number
   promptPayCount: number
-  cardCount: number
   tablesInUse: number
   tablesTotal: number
 }
@@ -62,7 +60,6 @@ export interface FinanceSummary {
   revenueTotal: number
   cashTotal: number
   promptPayTotal: number
-  cardTotal: number
   paymentCount: number
 }
 

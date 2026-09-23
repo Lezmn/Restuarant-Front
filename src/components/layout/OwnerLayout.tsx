@@ -42,7 +42,7 @@ export function OwnerLayout() {
 
   const handleSignOut = () => {
     signOut()
-    navigate('/owner/login')
+    navigate('/login')
   }
 
   return (

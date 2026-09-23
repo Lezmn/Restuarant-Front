@@ -87,9 +87,6 @@ export function CustomerMenuItemPage() {
         <div className="mt-4 flex items-start justify-between gap-3 lg:mt-0">
           <div>
             <h1 className="text-xl font-bold text-ink">{item.name}</h1>
-            {item.description && (
-              <p className="mt-1 text-sm text-gray-500">{item.description}</p>
-            )}
           </div>
           <p className="shrink-0 text-xl font-bold text-price">
             {formatBaht(item.price)}

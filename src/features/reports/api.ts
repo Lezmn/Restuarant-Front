@@ -53,8 +53,8 @@ export async function getDashboard(): Promise<DashboardData> {
   }))
 
   // /payments เรียงล่าสุดก่อนอยู่แล้ว
+  // ส่งครบทุกใบ แล้วให้หน้า Dashboard แบ่งหน้าเอง (เดิม slice(0,10) ทิ้ง ทำให้ดูบิลเก่าของวันไม่ได้เลย)
   const notifications: Notification[] = todayPayments
-    .slice(0, 10)
     .map((p: Payment) => ({
       id: p.id,
       tableName: p.tableName,
@@ -71,7 +71,6 @@ export async function getDashboard(): Promise<DashboardData> {
       netProfit: report.netProfit,
       cashTotal: report.revenueByMethod.CASH,
       promptPayTotal: report.revenueByMethod.PROMPTPAY,
-      cardTotal: report.revenueByMethod.CARD,
       orderCount: report.orderCount,
       paymentCount: report.paymentCount,
     },
@@ -79,7 +78,6 @@ export async function getDashboard(): Promise<DashboardData> {
     todayStatus: {
       cashCount: countByMethod(PaymentMethod.CASH),
       promptPayCount: countByMethod(PaymentMethod.PROMPTPAY),
-      cardCount: countByMethod(PaymentMethod.CARD),
       tablesInUse: report.tables[TableStatus.OCCUPIED],
       tablesTotal: report.tables.total,
     },
@@ -101,7 +99,6 @@ export async function getFinance(month: string): Promise<FinanceData> {
       revenueTotal: report.totalIncome,
       cashTotal: report.incomeByMethod.CASH,
       promptPayTotal: report.incomeByMethod.PROMPTPAY,
-      cardTotal: report.incomeByMethod.CARD,
       paymentCount: report.transactions.filter((t) => t.type === 'INCOME').length,
     },
     transactions: report.transactions.map((t) => ({
