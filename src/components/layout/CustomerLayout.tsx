@@ -9,7 +9,7 @@ import { NavLink, Outlet, useParams } from 'react-router-dom'
 
 function IconHome() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5 md:h-6 md:w-6">
       <path d="M3 10.5 12 3l9 7.5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M5.5 9.5V20h13V9.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -18,7 +18,7 @@ function IconHome() {
 
 function IconCart() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5 md:h-6 md:w-6">
       <path d="M3 4h2l2.2 10.5h9.9L19 7H6" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx="9.5" cy="19" r="1.4" />
       <circle cx="17" cy="19" r="1.4" />
@@ -28,7 +28,7 @@ function IconCart() {
 
 function IconBill() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5 md:h-6 md:w-6">
       <path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21z" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M9 8h6M9 12h6" strokeLinecap="round" />
     </svg>
@@ -37,7 +37,7 @@ function IconBill() {
 
 function IconClock() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5 md:h-6 md:w-6">
       <circle cx="12" cy="12" r="8.5" />
       <path d="M12 7.5V12l3 1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -91,8 +91,8 @@ export function CustomerLayout() {
         <span aria-hidden className="text-4xl">
           🧾
         </span>
-        <h1 className="text-lg font-bold text-ink">โต๊ะนี้ปิดบิลแล้ว</h1>
-        <p className="text-sm text-gray-600">
+        <h1 className="text-lg md:text-xl font-bold text-ink">โต๊ะนี้ปิดบิลแล้ว</h1>
+        <p className="text-sm md:text-base text-gray-600">
           ขอบคุณที่มาใช้บริการ หากต้องการสั่งเพิ่มกรุณาเรียกพนักงานเพื่อเปิดโต๊ะใหม่
         </p>
       </div>
@@ -106,11 +106,11 @@ export function CustomerLayout() {
         <span aria-hidden className="text-4xl">
           🔒
         </span>
-        <h1 className="text-lg font-bold text-ink">เปิดโต๊ะนี้ไม่ได้</h1>
-        <p className="text-sm text-gray-600">
+        <h1 className="text-lg md:text-xl font-bold text-ink">เปิดโต๊ะนี้ไม่ได้</h1>
+        <p className="text-sm md:text-base text-gray-600">
           {error instanceof Error ? error.message : 'ไม่พบโต๊ะนี้'}
         </p>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm md:text-base text-gray-500">
           กรุณาสแกน QR ที่โต๊ะใหม่อีกครั้ง หรือเรียกพนักงาน
         </p>
       </div>
@@ -128,14 +128,14 @@ export function CustomerLayout() {
     <div className="flex min-h-dvh flex-col bg-white">
       <header className="sticky top-0 z-20 border-b border-brand-75 bg-white/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-md items-center gap-3 px-4 py-3 md:max-w-3xl lg:max-w-6xl">
-          <span aria-hidden className="text-xl text-brand-400">
+          <span aria-hidden className="text-xl md:text-2xl text-brand-400">
             🍴
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-brand-400 sm:text-base">
+            <p className="truncate text-sm md:text-base font-bold text-brand-400 sm:text-base">
               {RESTAURANT_NAME}
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs md:text-sm text-gray-500">
               {isPending ? 'กำลังเปิดโต๊ะ...' : `โต๊ะ ${session?.tableName ?? '-'}`}
             </p>
           </div>
@@ -148,7 +148,7 @@ export function CustomerLayout() {
                 to={tab.to}
                 end={tab.end}
                 className={({ isActive }) =>
-                  `relative flex items-center gap-2 rounded-full px-3 py-2 text-sm transition ${
+                  `relative flex items-center gap-2 rounded-full px-3 py-2 text-sm md:text-base transition ${
                     isActive
                       ? 'bg-brand-300 font-semibold text-white'
                       : 'text-gray-600 hover:bg-brand-50'
@@ -158,7 +158,7 @@ export function CustomerLayout() {
                 {tab.icon}
                 <span className="hidden lg:inline">{tab.label}</span>
                 {Boolean(tab.badge) && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-xs font-bold text-white">
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-xs md:text-sm font-bold text-white">
                     {tab.badge}
                   </span>
                 )}

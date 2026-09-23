@@ -32,9 +32,9 @@ export const TableSessionStatus = {
 export type TableSessionStatus =
   (typeof TableSessionStatus)[keyof typeof TableSessionStatus]
 
+/** ร้านรับแค่เงินสดกับ PromptPay — ฝั่ง DB ยังมี CARD ค้างอยู่แต่ไม่ได้ใช้ */
 export const PaymentMethod = {
   CASH: 'CASH',
-  CARD: 'CARD',
   PROMPTPAY: 'PROMPTPAY',
 } as const
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod]

@@ -10,6 +10,7 @@ import { useMemo, useState } from 'react'
 /**
  * พนักงานรับออเดอร์แทนลูกค้า — สำหรับลูกค้าที่ไม่ได้สแกน QR
  * (หน้านี้ยังสั่งได้แค่เมนูเปล่า ๆ ยังไม่ให้เลือกตัวเลือกเมนู)
+ * หมายเหตุแยกตามเมนู ช่องจะโผล่เมื่อกดเลือกจำนวนแล้ว
  */
 export function TakeOrderDialog({
   session,
@@ -22,7 +23,9 @@ export function TakeOrderDialog({
   const createOrder = useCreateOrder()
 
   const [qty, setQty] = useState<Record<Id, number>>({})
-  const [note, setNote] = useState('')
+  // หมายเหตุแยกรายเมนู — เดิมใช้ช่องเดียวแล้วยัดให้ทุกบรรทัด
+  // พิมพ์ "ไม่ใส่ผัก" ทีเดียวติดไปทุกจาน ครัวได้ข้อมูลผิด
+  const [notes, setNotes] = useState<Record<Id, string>>({})
   const [search, setSearch] = useState('')
 
   const available = useMemo(() => {
@@ -34,7 +37,11 @@ export function TakeOrderDialog({
 
   const lines = Object.entries(qty)
     .filter(([, n]) => n > 0)
-    .map(([menuItemId, quantity]) => ({ menuItemId, quantity, note }))
+    .map(([menuItemId, quantity]) => ({
+      menuItemId,
+      quantity,
+      note: notes[menuItemId] ?? '',
+    }))
 
   const total = lines.reduce((sum, line) => {
     const item = items?.find((i) => i.id === line.menuItemId)
@@ -58,28 +65,53 @@ export function TakeOrderDialog({
       {isPending && <p className="mt-3 text-sm text-gray-500">กำลังโหลด...</p>}
 
       <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
-        {available.map((item) => (
-          <li
-            key={item.id}
-            className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-text">
-                {item.name}
-              </p>
-              <p className="text-sm text-amount">{formatBaht(item.price)}</p>
-            </div>
+        {available.map((item) => {
+          const picked = (qty[item.id] ?? 0) > 0
 
-            <QuantityStepper
-              size="sm"
-              min={0}
-              value={qty[item.id] ?? 0}
-              onChange={(next) =>
-                setQty((prev) => ({ ...prev, [item.id]: Math.max(0, next) }))
-              }
-            />
-          </li>
-        ))}
+          return (
+            <li
+              key={item.id}
+              className={`rounded-lg border px-3 py-2 ${
+                picked ? 'border-brand-300 bg-brand-50/40' : 'border-gray-200'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-text">
+                    {item.name}
+                  </p>
+                  <p className="text-sm text-amount">
+                    {formatBaht(item.price)}
+                  </p>
+                </div>
+
+                <QuantityStepper
+                  size="sm"
+                  min={0}
+                  value={qty[item.id] ?? 0}
+                  onChange={(next) =>
+                    setQty((prev) => ({
+                      ...prev,
+                      [item.id]: Math.max(0, next),
+                    }))
+                  }
+                />
+              </div>
+
+              {/* โผล่เฉพาะเมนูที่เลือกแล้ว ฟอร์มจะได้ไม่ยาวรกตอนยังไม่ได้เลือกอะไร */}
+              {picked && (
+                <input
+                  value={notes[item.id] ?? ''}
+                  onChange={(e) =>
+                    setNotes((prev) => ({ ...prev, [item.id]: e.target.value }))
+                  }
+                  placeholder={`หมายเหตุของ ${item.name} เช่น ไม่เผ็ด`}
+                  className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-brand-300"
+                />
+              )}
+            </li>
+          )
+        })}
 
         {!isPending && available.length === 0 && (
           <li className="py-6 text-center text-sm text-gray-400">
@@ -87,16 +119,6 @@ export function TakeOrderDialog({
           </li>
         )}
       </ul>
-
-      <label className="mt-3 block text-sm">
-        <span className="font-semibold text-gray-700">หมายเหตุ</span>
-        <input
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="เช่น ไม่เผ็ด (ใส่ให้ทุกรายการในออเดอร์นี้)"
-          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-brand-300"
-        />
-      </label>
 
       <div className="mt-4 flex items-center justify-between rounded-lg bg-brand-50 px-4 py-3">
         <span className="text-sm font-semibold text-gray-700">

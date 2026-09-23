@@ -1,16 +1,23 @@
 import { apiClient } from '@/lib/api-client'
 import type { ApiExpense } from '@/types/api'
 import type { ExpenseCategory } from '@/types/enums'
+import type { Id } from '@/types/models'
 
-/** POST /expenses @Roles(ADMIN) — backend ใช้เวลาปัจจุบันเป็น spentAt ถ้าไม่ส่ง */
-export async function addExpense(vars: {
+export interface ExpenseInput {
   detail: string
   category: ExpenseCategory
   amount: number
-}): Promise<ApiExpense> {
-  // backend ก็ validate อยู่แล้ว แต่ข้อความฝั่งนี้อ่านง่ายกว่า class-validator
+}
+
+/** เช็คฝั่งนี้ก่อนยิง ข้อความอ่านง่ายกว่าที่ class-validator ส่งกลับมา */
+function assertValid(vars: ExpenseInput) {
   if (!vars.detail.trim()) throw new Error('กรุณากรอกรายละเอียด')
   if (!(vars.amount > 0)) throw new Error('จำนวนเงินต้องมากกว่า 0')
+}
+
+/** POST /expenses @Roles(ADMIN) — backend ใช้เวลาปัจจุบันเป็น spentAt ถ้าไม่ส่ง */
+export async function addExpense(vars: ExpenseInput): Promise<ApiExpense> {
+  assertValid(vars)
 
   return apiClient<ApiExpense>('/expenses', {
     method: 'POST',
@@ -20,4 +27,26 @@ export async function addExpense(vars: {
       amount: vars.amount,
     }),
   })
+}
+
+/** PATCH /expenses/:id @Roles(ADMIN) */
+export async function updateExpense(vars: {
+  id: Id
+  input: ExpenseInput
+}): Promise<ApiExpense> {
+  assertValid(vars.input)
+
+  return apiClient<ApiExpense>(`/expenses/${vars.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      title: vars.input.detail.trim(),
+      category: vars.input.category,
+      amount: vars.input.amount,
+    }),
+  })
+}
+
+/** DELETE /expenses/:id @Roles(ADMIN) */
+export async function deleteExpense(id: Id): Promise<void> {
+  await apiClient<void>(`/expenses/${id}`, { method: 'DELETE' })
 }

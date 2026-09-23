@@ -2,7 +2,6 @@ import { FoodImage } from '@/components/ui/FoodImage'
 import { ErrorNote } from '@/components/ui/ErrorNote'
 import {
   useCategories,
-  useCreateCategory,
   useCreateMenuItem,
   useCreateMenuOption,
   useDeleteMenuItem,
@@ -11,6 +10,7 @@ import {
   useUpdateMenuItem,
 } from '@/features/menu/hooks'
 import type { MenuItem } from '@/types/models'
+import { IngredientsPanel } from './IngredientsPanel'
 import { MenuFormDialog } from './MenuFormDialog'
 import { formatBaht } from '@/lib/format'
 import { useMemo, useState } from 'react'
@@ -25,14 +25,11 @@ export function ManagePage() {
   const createOption = useCreateMenuOption()
   const updateItem = useUpdateMenuItem()
   const deleteItem = useDeleteMenuItem()
-  const createCategory = useCreateCategory()
 
   const [tab, setTab] = useState<Tab>('menu')
   const [search, setSearch] = useState('')
   /** '' = ทุกหมวด */
   const [categoryId, setCategoryId] = useState('')
-  /** เปิดการ์ดกรอกชื่อหมวดใหม่ */
-  const [addingCategory, setAddingCategory] = useState(false)
   /** null = ปิดฟอร์ม, 'new' = เพิ่มใหม่, object = แก้ไขเมนูนั้น */
   const [editing, setEditing] = useState<MenuItem | 'new' | null>(null)
 
@@ -118,42 +115,11 @@ export function ManagePage() {
               {`${c.name} (${countByCategory.get(c.id) ?? 0})`}
             </Chip>
           ))}
-          <button
-            type="button"
-            onClick={() => setAddingCategory(true)}
-            className="rounded-full border-2 border-dashed border-brand-300 px-4 py-1 text-sm font-bold text-brand-400 transition hover:bg-brand-50"
-          >
-            + เพิ่มหมวดหมู่
-          </button>
         </div>
-      )}
-
-      {tab === 'menu' && addingCategory && (
-        <NewCategoryCard
-          isSaving={createCategory.isPending}
-          error={createCategory.error}
-          onCancel={() => {
-            createCategory.reset()
-            setAddingCategory(false)
-          }}
-          onSubmit={(name) =>
-            createCategory.mutate(name, {
-              // เพิ่มเสร็จให้กรองไปที่หมวดใหม่เลย จะได้เห็นว่าเพิ่มเมนูเข้าหมวดนี้ได้ทันที
-              onSuccess: (created) => {
-                setCategoryId(created.id)
-                setAddingCategory(false)
-              },
-            })
-          }
-        />
       )}
 
       {tab === 'ingredient' ? (
-        <div className="mt-6 rounded-xl border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500">
-          ยังทำไม่ได้ — backend ยังไม่มี model วัตถุดิบ
-          <br />
-          ต้องเพิ่ม Ingredient model ใน prisma schema ก่อน
-        </div>
+        <IngredientsPanel />
       ) : (
         <>
           {isPending && (
@@ -275,62 +241,6 @@ export function ManagePage() {
         />
       )}
     </div>
-  )
-}
-
-/** การ์ดกรอกชื่อหมวดใหม่ — โผล่ใต้แถบชิป ไม่ใช้ Modal เพราะกรอกแค่ช่องเดียว */
-function NewCategoryCard({
-  isSaving,
-  error,
-  onCancel,
-  onSubmit,
-}: {
-  isSaving: boolean
-  error: unknown
-  onCancel: () => void
-  onSubmit: (name: string) => void
-}) {
-  const [name, setName] = useState('')
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault()
-        if (name.trim()) onSubmit(name.trim())
-      }}
-      className="mt-3 max-w-md rounded-xl border border-brand-300 bg-brand-50/40 p-4"
-    >
-      <ErrorNote error={error} />
-      <label className="block text-sm">
-        <span className="font-semibold text-gray-700">ชื่อหมวดหมู่ใหม่</span>
-        <input
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') onCancel()
-          }}
-          placeholder="เช่น ของหวาน"
-          className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 outline-none focus:border-brand-300"
-        />
-      </label>
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border-2 border-gray-300 bg-white py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-50"
-        >
-          ยกเลิก
-        </button>
-        <button
-          type="submit"
-          disabled={isSaving || !name.trim()}
-          className="rounded-lg bg-brand-300 py-2 text-sm font-bold text-white transition hover:bg-brand-400 disabled:opacity-60"
-        >
-          {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
-        </button>
-      </div>
-    </form>
   )
 }
 

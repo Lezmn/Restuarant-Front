@@ -6,7 +6,6 @@ import type { Payment } from '@/types/models'
 
 const methodLabel: Record<string, string> = {
   [PaymentMethod.CASH]: 'เงินสด',
-  [PaymentMethod.CARD]: 'บัตร',
   [PaymentMethod.PROMPTPAY]: 'PromptPay',
 }
 

@@ -3,7 +3,6 @@
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { PageLoading } from '@/components/ui/PageLoading'
 import { pageRoles } from '@/features/auth/permissions'
-import { Role } from '@/types/enums'
 import { lazy, Suspense, type ReactNode } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
@@ -128,18 +127,23 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // ---------- ฝั่งพนักงาน: ต้อง login + เช็ค role ----------
+  // ---------- login หน้าเดียวใช้ได้ทุก role ----------
+  // เดิมแยก /employee/login กับ /owner/login ทั้งที่ฟอร์มเหมือนกัน
+  // เจ้าของร้านเข้าหน้าพนักงานได้อยู่แล้ว (มีปุ่ม Dashboard ที่หัวจอ)
   {
-    path: '/employee/login',
+    path: '/login',
     element: s(
       <LoginPage
         title="เข้าสู่ระบบ"
-        subtitle="สำหรับพนักงาน"
+        subtitle="ร้านอาหาร"
         redirectTo="/employee"
-        hint="admin (ADMIN) · waiter, cashier (STAFF) · kitchen (KITCHEN)"
+        hint="admin (ADMIN) · staff (STAFF) · kitchen (KITCHEN)"
       />,
     ),
   },
+  // ลิงก์เก่าที่อาจถูก bookmark ไว้
+  { path: '/employee/login', element: <Navigate to="/login" replace /> },
+  { path: '/owner/login', element: <Navigate to="/login" replace /> },
   {
     path: '/employee',
     // ชั้นที่ 1: ต้องมี token ไม่งั้นเด้งไปหน้า login
@@ -188,27 +192,10 @@ export const router = createBrowserRouter([
   },
 
   // ---------- ฝั่งเจ้าของร้าน: ADMIN เท่านั้น ----------
-  // ดีไซน์แยกหน้า login ของเจ้าของร้านออกจากพนักงาน (Desktop-16)
-  {
-    path: '/owner/login',
-    element: s(
-      <LoginPage
-        title="ร้านอาหาร"
-        subtitle="สำหรับเจ้าของร้าน"
-        redirectTo="/owner/dashboard"
-        allowedRoles={[Role.ADMIN]}
-        hint="ผู้ใช้: admin"
-      />,
-    ),
-  },
   {
     path: '/owner',
     element: (
-      <ProtectedRoute
-        roles={pageRoles.owner}
-        loginPath="/owner/login"
-        fallbackPath="/owner/login"
-      />
+      <ProtectedRoute roles={pageRoles.owner} fallbackPath="/employee" />
     ),
     children: [
       {

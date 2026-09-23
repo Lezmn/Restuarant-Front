@@ -74,6 +74,9 @@ const OPTION_GROUPS: {
 ]
 
 const mapMenuOption = (o: ApiMenuOption): MenuOption => ({
+  ingredientId: o.ingredientId ?? o.ingredient?.id ?? null,
+  ingredientName: o.ingredient?.name ?? null,
+  ingredientOutOfStock: o.ingredient ? !o.ingredient.isAvailable : false,
   id: o.id,
   name: o.name,
   price: o.price,
@@ -103,7 +106,6 @@ export const mapMenuItem = (m: ApiMenuItem): MenuItem => ({
   id: m.id,
   categoryId: m.categoryId,
   name: m.name,
-  description: m.description,
   price: m.price,
   imageUrl: m.imageUrl,
   isAvailable: m.isAvailable,
@@ -117,6 +119,7 @@ export const mapOrder = (o: ApiOrder): Order => ({
   tableName: tableName(o.table),
   status: o.status,
   createdAt: o.createdAt,
+  clearedAt: o.clearedAt ?? null,
   items: o.items.map((item) => ({
     id: item.id,
     menuItemId: item.menuItemId ?? '',

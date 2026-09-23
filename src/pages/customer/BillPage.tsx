@@ -5,7 +5,7 @@ import {
 } from '@/features/public/hooks'
 import { formatBaht } from '@/lib/format'
 import { itemTotal, orderTotal } from '@/features/orders/order-total'
-import { PaymentMethod } from '@/types/enums'
+import { OrderStatus, PaymentMethod } from '@/types/enums'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
@@ -16,18 +16,23 @@ export function CustomerBillPage() {
   const checkout = useRequestCheckout()
   const [chosen, setChosen] = useState<PaymentMethod | null>(null)
 
-  if (isPending) return <p className="text-sm text-gray-500">กำลังโหลด...</p>
+  if (isPending) return <p className="text-sm md:text-base text-gray-500">กำลังโหลด...</p>
 
-  const items = (orders ?? []).flatMap((o) => o.items)
-  const total = (orders ?? []).reduce((sum, o) => sum + orderTotal(o), 0)
+  // ออเดอร์ที่ครัวยกเลิกต้องไม่คิดเงิน — ยอดนี้ต้องตรงกับที่แคชเชียร์เก็บจริง
+  const billable = (orders ?? []).filter(
+    (o) => o.status !== OrderStatus.CANCELLED,
+  )
+  const cancelledCount = (orders ?? []).length - billable.length
+  const items = billable.flatMap((o) => o.items)
+  const total = billable.reduce((sum, o) => sum + orderTotal(o), 0)
 
   if (items.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-sm text-gray-500">ยังไม่มีรายการที่สั่ง</p>
+        <p className="text-sm md:text-base text-gray-500">ยังไม่มีรายการที่สั่ง</p>
         <Link
           to={`/t/${token}`}
-          className="mt-4 inline-block rounded-full bg-brand-300 px-6 py-2.5 text-sm font-bold text-white"
+          className="mt-4 inline-block rounded-full bg-brand-300 px-6 py-2.5 text-sm md:text-base font-bold text-white"
         >
           เลือกเมนู
         </Link>
@@ -37,8 +42,8 @@ export function CustomerBillPage() {
 
   return (
     <div className="lg:mx-auto lg:max-w-2xl">
-      <h1 className="text-xl font-bold text-black">สรุปรายการอาหาร</h1>
-      <p className="text-sm text-gray-500">
+      <h1 className="text-xl md:text-2xl font-bold text-black">สรุปรายการอาหาร</h1>
+      <p className="text-sm md:text-base text-gray-500">
         {session ? `โต๊ะ ${session.tableName} : ` : ''}
         ทั้งหมด {items.length} รายการ
       </p>
@@ -46,10 +51,10 @@ export function CustomerBillPage() {
       <ul className="mt-4 divide-y divide-brand-100 rounded-xl bg-listing px-4 shadow-md">
         {items.map((item) => (
           <li key={item.id} className="flex items-center gap-3 py-3">
-            <span className="w-6 shrink-0 text-sm font-semibold text-gray-700">
+            <span className="w-6 shrink-0 text-sm md:text-base font-semibold text-gray-700">
               {item.quantity}
             </span>
-            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
+            <span className="min-w-0 flex-1 truncate text-sm md:text-base font-semibold text-text">
               {item.menuItemName}
               {item.optionNames.length > 0 && (
                 <span className="text-gray-500">
@@ -58,16 +63,22 @@ export function CustomerBillPage() {
                 </span>
               )}
             </span>
-            <span className="shrink-0 text-sm font-semibold text-amount">
+            <span className="shrink-0 text-sm md:text-base font-semibold text-amount">
               {formatBaht(itemTotal(item))}
             </span>
           </li>
         ))}
       </ul>
 
+      {cancelledCount > 0 && (
+        <p className="mt-3 rounded-xl bg-danger/10 px-4 py-3 text-sm md:text-base text-danger">
+          มี {cancelledCount} ออเดอร์ที่ถูกยกเลิก — ไม่ได้รวมอยู่ในยอดนี้
+        </p>
+      )}
+
       <div className="mt-4 flex items-center justify-between rounded-xl bg-brand-300 px-5 py-4 text-white shadow-md">
-        <span className="text-lg font-bold">รวมสุทธิ</span>
-        <span className="text-xl font-bold">{formatBaht(total)}</span>
+        <span className="text-lg md:text-xl font-bold">รวมสุทธิ</span>
+        <span className="text-xl md:text-2xl font-bold">{formatBaht(total)}</span>
       </div>
 
       {checkout.isSuccess ? (
@@ -75,14 +86,14 @@ export function CustomerBillPage() {
           <p className="font-semibold text-success">
             แจ้งเช็คบิลเรียบร้อยแล้ว
           </p>
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="mt-1 text-sm md:text-base text-gray-600">
             กรุณาชำระเงินที่เคาน์เตอร์
             {chosen === PaymentMethod.PROMPTPAY ? ' ด้วย PromptPay' : ' ด้วยเงินสด'}
           </p>
         </div>
       ) : (
         <>
-          <p className="mt-6 text-sm text-gray-600">เลือกวิธีชำระเงิน</p>
+          <p className="mt-6 text-sm md:text-base text-gray-600">เลือกวิธีชำระเงิน</p>
           <div className="mt-2 space-y-3 md:flex md:gap-3 md:space-y-0">
             <PaymentButton
               icon={<IconQr />}
@@ -113,7 +124,7 @@ export function CustomerBillPage() {
       )}
 
       {checkout.isError && (
-        <p className="mt-3 text-sm text-danger">{checkout.error.message}</p>
+        <p className="mt-3 text-sm md:text-base text-danger">{checkout.error.message}</p>
       )}
     </div>
   )
@@ -140,7 +151,7 @@ function PaymentButton({
       <span aria-hidden className="text-brand-300">
         {icon}
       </span>
-      <span className="text-sm font-bold text-text">{label}</span>
+      <span className="text-sm md:text-base font-bold text-text">{label}</span>
     </button>
   )
 }

@@ -6,6 +6,7 @@ import {
   useUpdateMenuOption,
 } from '@/features/menu/hooks'
 import type { MenuOptionInput } from '@/features/menu/api'
+import { useIngredients } from '@/features/ingredients/hooks'
 import { formatBaht } from '@/lib/format'
 import { MenuOptionGroupKind } from '@/types/enums'
 import type { Id, MenuOption } from '@/types/models'
@@ -39,7 +40,8 @@ export function MenuOptionsEditor({ menuItemId }: { menuItemId: Id }) {
     <section className="rounded-xl border border-gray-200 bg-gray-50 p-3">
       <h3 className="text-sm font-bold text-gray-800">ตัวเลือกของเมนู</h3>
       <p className="mt-0.5 text-xs text-gray-500">
-        ปิดสวิตช์ = ลูกค้าจะไม่เห็นตัวเลือกนั้น (ใช้ตอนของหมดชั่วคราว)
+        ปิดสวิตช์ = ลูกค้าจะไม่เห็นตัวเลือกนั้น (ใช้ตอนของหมดชั่วคราว) ·
+        ผูกวัตถุดิบไว้ = ของหมดทีเดียวหายทุกเมนู
       </p>
 
       <div className="mt-2">
@@ -163,13 +165,20 @@ function OptionRow({
   option: MenuOption
   disabled: boolean
   onToggle: (isAvailable: boolean) => void
-  onSave: (input: { name: string; price: number; group: MenuOptionGroupKind }) => void
+  onSave: (input: {
+    name: string
+    price: number
+    group: MenuOptionGroupKind
+    ingredientId: Id | null
+  }) => void
   onDelete: () => void
 }) {
+  const { data: ingredients } = useIngredients()
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(option.name)
   const [price, setPrice] = useState(String(option.price))
   const [group, setGroup] = useState<MenuOptionGroupKind>(option.group)
+  const [ingredientId, setIngredientId] = useState(option.ingredientId ?? '')
 
   if (editing) {
     return (
@@ -197,11 +206,30 @@ function OptionRow({
           <option value={MenuOptionGroupKind.PROTEIN}>เนื้อสัตว์</option>
           <option value={MenuOptionGroupKind.EXTRA}>เพิ่มเติม</option>
         </select>
+        <select
+          value={ingredientId}
+          onChange={(e) => setIngredientId(e.target.value)}
+          title="ผูกกับวัตถุดิบ — ของหมดแล้วตัวเลือกนี้หายทุกเมนู"
+          className={inputClass}
+        >
+          <option value="">ไม่ผูกวัตถุดิบ</option>
+          {ingredients?.map((ing) => (
+            <option key={ing.id} value={ing.id}>
+              {ing.name}
+              {ing.isAvailable ? '' : ' (หมด)'}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           disabled={disabled || !name.trim()}
           onClick={() => {
-            onSave({ name: name.trim(), price: Number(price) || 0, group })
+            onSave({
+              name: name.trim(),
+              price: Number(price) || 0,
+              group,
+              ingredientId: ingredientId || null,
+            })
             setEditing(false)
           }}
           className="rounded-lg bg-brand-300 px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-400 disabled:opacity-50"
@@ -214,6 +242,7 @@ function OptionRow({
             setName(option.name)
             setPrice(String(option.price))
             setGroup(option.group)
+            setIngredientId(option.ingredientId ?? '')
             setEditing(false)
           }}
           className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-50"
@@ -232,6 +261,16 @@ function OptionRow({
     >
       <span className="min-w-0 flex-1 truncate text-sm text-gray-900">
         {option.name}
+        {option.ingredientName && (
+          <span
+            className={`ml-1 text-xs ${
+              option.ingredientOutOfStock ? 'font-semibold text-danger' : 'text-gray-400'
+            }`}
+          >
+            [{option.ingredientName}
+            {option.ingredientOutOfStock ? ' — หมด' : ''}]
+          </span>
+        )}
         {option.price > 0 && (
           <span className="ml-1 text-xs text-gray-500">+{formatBaht(option.price)}</span>
         )}

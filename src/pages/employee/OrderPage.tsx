@@ -1,11 +1,15 @@
-import { useOrders, useUpdateOrderStatus } from '@/features/orders/hooks'
+import {
+  useClearOrder,
+  useOrders,
+  useUpdateOrderStatus,
+} from '@/features/orders/hooks'
 import { ErrorNote } from '@/components/ui/ErrorNote'
 import { LIVE_POLL_MS } from '@/lib/live'
 import { OrderStatus } from '@/types/enums'
-import type { Id, Order } from '@/types/models'
+import type { Order } from '@/types/models'
 import { useState } from 'react'
 
-// ยังไม่มี WebSocket ฝั่ง backend — ใช้ polling ไปก่อน
+// socket สั่ง refetch ให้อยู่แล้ว — poll นี้เป็นตัวสำรองตอน socket หลุด
 const POLL_MS = LIVE_POLL_MS
 
 const waitedMinutes = (iso: string) =>
@@ -58,13 +62,15 @@ const columns: {
 export function OrderPage() {
   const { data: orders, isPending } = useOrders({ refetchInterval: POLL_MS })
   const updateStatus = useUpdateOrderStatus()
+  const clearOrder = useClearOrder()
 
-  // backend ยังไม่มีสถานะ "เคลียร์ออกจากบอร์ด" — เก็บไว้ในหน้าจอก่อน
-  const [cleared, setCleared] = useState<Id[]>([])
   // ติ๊กรายอาหารว่าทำแล้ว — เป็นตัวช่วยของครัว ไม่ได้ส่งขึ้น backend
   const [checked, setChecked] = useState<Record<string, boolean>>({})
 
-  const visible = (orders ?? []).filter((o) => !cleared.includes(o.id))
+  // เคลียร์แล้วเก็บไว้ที่ backend (clearedAt) ไม่ใช่ใน state
+  // ไม่งั้นรีเฟรชก็กลับมา จอครัวอีกเครื่องก็ยังเห็น และพอแคชเชียร์ยกเลิกบิล
+  // ออเดอร์ที่เสิร์ฟไปนานแล้วจะเด้งกลับขึ้นบอร์ดเหมือนมีของต้องทำใหม่
+  const visible = (orders ?? []).filter((o) => !o.clearedAt)
 
   const handleAdvance = (order: Order, key: ColumnKey) => {
     if (key === 'queue') {
@@ -72,13 +78,13 @@ export function OrderPage() {
     } else if (key === 'cooking') {
       updateStatus.mutate({ id: order.id, status: OrderStatus.SERVED })
     } else {
-      setCleared((prev) => [...prev, order.id])
+      clearOrder.mutate(order.id)
     }
   }
 
   return (
     <div className="relative">
-      <ErrorNote error={updateStatus.error} />
+      <ErrorNote error={updateStatus.error ?? clearOrder.error} />
 
       {isPending && <p className="text-sm text-gray-500">กำลังโหลด...</p>}
 
@@ -174,7 +180,7 @@ export function OrderPage() {
 
                     <button
                       type="button"
-                      disabled={updateStatus.isPending}
+                      disabled={updateStatus.isPending || clearOrder.isPending}
                       onClick={() => handleAdvance(order, column.key)}
                       className={`mt-3 w-full rounded-lg py-2.5 text-sm font-bold text-white transition disabled:opacity-60 ${column.button}`}
                     >

@@ -42,10 +42,10 @@ export function CustomerMenuItemPage() {
   const unitPrice =
     (item?.price ?? 0) + selectedOptions.reduce((sum, o) => sum + o.price, 0)
 
-  if (isPending) return <p className="text-sm text-gray-500">กำลังโหลด...</p>
+  if (isPending) return <p className="text-sm md:text-base text-gray-500">กำลังโหลด...</p>
   if (isError || !item) {
     return (
-      <p className="text-sm text-danger">
+      <p className="text-sm md:text-base text-danger">
         {error instanceof Error ? error.message : 'ไม่พบเมนูนี้'}
       </p>
     )
@@ -76,7 +76,7 @@ export function CustomerMenuItemPage() {
           type="button"
           onClick={() => navigate(-1)}
           aria-label="ย้อนกลับ"
-          className="absolute top-3 left-3 flex h-10 w-10 items-center justify-center rounded-full border-2 border-brand-300 bg-white text-lg font-bold text-brand-300 shadow-sm"
+          className="absolute top-3 left-3 flex h-10 w-10 items-center justify-center rounded-full border-2 border-brand-300 bg-white text-lg md:text-xl font-bold text-brand-300 shadow-sm"
         >
           ←
         </button>
@@ -86,12 +86,9 @@ export function CustomerMenuItemPage() {
       <div className="pb-32 lg:pb-0">
         <div className="mt-4 flex items-start justify-between gap-3 lg:mt-0">
           <div>
-            <h1 className="text-xl font-bold text-ink">{item.name}</h1>
-            {item.description && (
-              <p className="mt-1 text-sm text-gray-500">{item.description}</p>
-            )}
+            <h1 className="text-xl md:text-2xl font-bold text-ink">{item.name}</h1>
           </div>
-          <p className="shrink-0 text-xl font-bold text-price">
+          <p className="shrink-0 text-xl md:text-2xl font-bold text-price">
             {formatBaht(item.price)}
           </p>
         </div>
@@ -112,13 +109,13 @@ export function CustomerMenuItemPage() {
         ))}
 
         <label className="mt-5 block">
-          <span className="text-sm font-semibold text-gray-700">หมายเหตุ</span>
+          <span className="text-sm md:text-base font-semibold text-gray-700">หมายเหตุ</span>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
             placeholder="เช่น ไม่เผ็ด ไม่ใส่ผัก"
-            className="mt-2 w-full resize-none rounded-xl border-2 border-brand-75 p-3 text-sm outline-none focus:border-brand-300"
+            className="mt-2 w-full resize-none rounded-xl border-2 border-brand-75 p-3 text-sm md:text-base outline-none focus:border-brand-300"
           />
         </label>
 
@@ -130,7 +127,7 @@ export function CustomerMenuItemPage() {
               type="button"
               onClick={handleAdd}
               disabled={missingRequired.length > 0}
-              className="flex-1 rounded-full bg-brand-300 py-3 text-sm font-bold text-white transition disabled:bg-gray-300"
+              className="flex-1 rounded-full bg-brand-300 py-3 text-sm md:text-base font-bold text-white transition disabled:bg-gray-300"
             >
               {missingRequired.length > 0
                 ? `กรุณาเลือก${missingRequired[0].name}`
@@ -158,7 +155,7 @@ function OptionGroupBlock({
 }) {
   return (
     <fieldset className="mt-5">
-      <legend className="text-sm font-semibold text-gray-700">
+      <legend className="text-sm md:text-base font-semibold text-gray-700">
         {group.name}
         {group.required && <span className="ml-1 text-danger">*</span>}
       </legend>
@@ -179,10 +176,10 @@ function OptionGroupBlock({
                   : 'border-brand-75 bg-white hover:border-brand-100'
               }`}
             >
-              <span className="text-sm text-gray-900">
+              <span className="text-sm md:text-base text-gray-900">
                 {option.name}
                 {option.price > 0 && (
-                  <span className="block text-xs text-gray-500">
+                  <span className="block text-xs md:text-sm text-gray-500">
                     +{option.price}
                   </span>
                 )}

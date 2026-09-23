@@ -25,7 +25,6 @@ export function MenuFormDialog({
   const { data: categories } = useCategories()
 
   const [name, setName] = useState(item?.name ?? '')
-  const [description, setDescription] = useState(item?.description ?? '')
   const [price, setPrice] = useState(String(item?.price ?? ''))
   const [imageUrl, setImageUrl] = useState(item?.imageUrl ?? '')
   const [categoryId, setCategoryId] = useState(item?.categoryId ?? '')
@@ -43,8 +42,7 @@ export function MenuFormDialog({
           onSubmit(
             {
               name,
-              description: description.trim() || null,
-              price: Number(price),
+                price: Number(price),
               imageUrl: imageUrl.trim() || null,
               categoryId: categoryId || (categories?.[0]?.id ?? ''),
               isAvailable,
@@ -62,16 +60,6 @@ export function MenuFormDialog({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="เช่น ข้าวผัดกะเพรา"
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-brand-300"
-          />
-        </label>
-
-        <label className="block text-sm">
-          <span className="font-semibold text-gray-700">คำอธิบาย</span>
-          <input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="ไม่บังคับ"
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-brand-300"
           />
         </label>

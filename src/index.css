@@ -71,17 +71,42 @@ body {
     visibility: visible;
   }
 
+  /* กล่องซ้อน (Modal) เป็น position:fixed ซึ่งเบราว์เซอร์จะวาดซ้ำทุกหน้ากระดาษ
+     ถ้าปล่อยไว้จะได้ใบเสร็จ 2 ชุด — ปลด fixed/absolute ให้เนื้อหาไหลปกติหน้าเดียว */
+  .print-shell {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    background: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-height: none !important;
+    max-width: none !important;
+    width: auto !important;
+  }
+
   .print-area {
-    position: absolute;
-    inset: 0;
+    position: static;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 1rem;
     background: white;
     border: none;
     box-shadow: none;
     padding: 0;
+  }
+
+  /* กันหน้าเปล่าท้ายกระดาษ */
+  html,
+  body {
+    height: auto !important;
+  }
+
+  @page {
+    margin: 10mm;
   }
 }

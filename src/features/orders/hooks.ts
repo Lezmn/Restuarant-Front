@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { LIVE_STALE_TIME, useLivePollInterval } from '@/lib/live'
-import { createOrder, getOrders, updateOrderStatus } from './api'
+import { clearOrder, createOrder, getOrders, updateOrderStatus } from './api'
 
 export const orderKeys = {
   all: ['orders'] as const,
@@ -24,6 +24,15 @@ export function useUpdateOrderStatus() {
       // ยกเลิกออเดอร์แล้วโต๊ะกลับเป็นว่าง
       qc.invalidateQueries({ queryKey: ['tables'] })
     },
+  })
+}
+
+/** เคลียร์ออเดอร์ที่เสิร์ฟแล้วออกจากบอร์ดครัว */
+export function useClearOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: clearOrder,
+    onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.all }),
   })
 }
 

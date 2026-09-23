@@ -45,12 +45,22 @@ export interface ApiMenuOption {
   /** PROTEIN = เนื้อสัตว์, EXTRA = เพิ่มเติม — backend default เป็น EXTRA */
   group?: MenuOptionGroupKind
   isAvailable: boolean
+  /** ผูกกับวัตถุดิบกลาง — วัตถุดิบหมดแล้วตัวเลือกนี้สั่งไม่ได้ทุกเมนู */
+  ingredientId?: string | null
+  ingredient?: { id: string; name: string; isAvailable: boolean } | null
+}
+
+/** GET /ingredients — _count มาเฉพาะตอนดึงเป็นรายการ */
+export interface ApiIngredient {
+  id: string
+  name: string
+  isAvailable: boolean
+  _count?: { menuOptions: number }
 }
 
 export interface ApiMenuItem {
   id: string
   name: string
-  description: string | null
   price: number
   imageUrl: string | null
   isAvailable: boolean
@@ -87,6 +97,8 @@ export interface ApiOrder {
   id: string
   status: OrderStatus
   createdAt: string
+  /** ครัวกดว่ายกให้ลูกค้าแล้ว — null = ยังอยู่บนบอร์ดครัว */
+  clearedAt?: string | null
   tableId?: string
   tableSessionId?: string | null
   table?: ApiTable

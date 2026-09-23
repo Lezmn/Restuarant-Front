@@ -13,15 +13,6 @@ export async function getCategories(): Promise<Category[]> {
   }))
 }
 
-/** POST /categories @Roles(ADMIN) — ชื่อซ้ำ backend ตอบ 409 พร้อมข้อความ */
-export async function createCategory(name: string): Promise<Category> {
-  const data = await apiClient<ApiCategory>('/categories', {
-    method: 'POST',
-    body: JSON.stringify({ name: name.trim() }),
-  })
-  return { id: data.id, name: data.name, sortOrder: data.sortOrder ?? 0 }
-}
-
 export async function getMenuItems(): Promise<MenuItem[]> {
   const data = await apiClient<ApiMenuItem[]>('/menu')
   return data.map(mapMenuItem)
@@ -34,7 +25,6 @@ export async function getMenuItem(id: Id): Promise<MenuItem> {
 
 export interface MenuItemInput {
   name: string
-  description: string | null
   price: number
   imageUrl: string | null
   categoryId: Id
@@ -70,6 +60,8 @@ export async function deleteMenuItem(id: Id): Promise<void> {
 // ===== ตัวเลือกของเมนู (หมู/ไก่/ไข่ดาว) — ทุก endpoint ต้องเป็น ADMIN =====
 
 export interface MenuOptionInput {
+  /** ผูกกับวัตถุดิบกลาง (null = ไม่ผูก) */
+  ingredientId?: Id | null
   name: string
   price: number
   group: MenuOptionGroupKind

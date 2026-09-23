@@ -22,10 +22,7 @@ export function CustomerMenuPage() {
     const keyword = search.trim().toLowerCase()
     return (items ?? []).filter((item) => {
       const matchCategory = !categoryId || item.categoryId === categoryId
-      const matchSearch =
-        !keyword ||
-        item.name.toLowerCase().includes(keyword) ||
-        (item.description ?? '').toLowerCase().includes(keyword)
+      const matchSearch = !keyword || item.name.toLowerCase().includes(keyword)
       return matchCategory && matchSearch
     })
   }, [items, search, categoryId])
@@ -59,8 +56,8 @@ export function CustomerMenuPage() {
 
       {/* แบนเนอร์ */}
       <div className="mt-4 overflow-hidden rounded-2xl bg-gradient-to-r from-brand-300 to-brand-200 px-5 py-6 text-white md:px-8 md:py-10">
-        <p className="text-sm font-medium opacity-90">ยินดีต้อนรับ</p>
-        <p className="text-2xl leading-tight font-bold md:text-3xl">
+        <p className="text-sm md:text-base font-medium opacity-90">ยินดีต้อนรับ</p>
+        <p className="text-2xl md:text-3xl leading-tight font-bold md:text-3xl">
           ร้านอาหาร
           <br />
           ตามสั่ง
@@ -68,11 +65,11 @@ export function CustomerMenuPage() {
       </div>
 
       {isPending && (
-        <p className="mt-6 text-sm text-gray-500">กำลังโหลดเมนู...</p>
+        <p className="mt-6 text-sm md:text-base text-gray-500">กำลังโหลดเมนู...</p>
       )}
 
       {!isPending && visible.length === 0 && (
-        <p className="mt-10 text-center text-sm text-gray-500">
+        <p className="mt-10 text-center text-sm md:text-base text-gray-500">
           ไม่พบเมนูที่ค้นหา
         </p>
       )}
@@ -97,10 +94,10 @@ export function CustomerMenuPage() {
 
             <div className="flex items-end justify-between gap-2 px-2.5 pt-2 pb-2.5">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-ink">
+                <p className="truncate text-sm md:text-base font-semibold text-ink">
                   {item.name}
                 </p>
-                <p className="text-sm font-semibold text-price">
+                <p className="text-sm md:text-base font-semibold text-price">
                   {item.isAvailable ? formatBaht(item.price) : 'หมดชั่วคราว'}
                 </p>
               </div>
@@ -108,7 +105,7 @@ export function CustomerMenuPage() {
               {item.isAvailable && (
                 <span
                   aria-hidden
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-white text-xl leading-none font-bold text-brand-400"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-white text-xl leading-none font-bold text-brand-400 md:h-10 md:w-10 md:text-2xl"
                 >
                   +
                 </span>
@@ -124,7 +121,7 @@ export function CustomerMenuPage() {
           to={`/t/${token}/cart`}
           className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-md items-center justify-between bg-brand-300 px-4 py-3 text-white shadow-lg md:hidden"
         >
-          <span className="text-sm font-medium">
+          <span className="text-sm md:text-base font-medium">
             เลือกแล้ว {cartCount(lines)} รายการ
           </span>
           <span className="font-bold">{formatBaht(cartTotal(lines))}</span>
@@ -147,7 +144,7 @@ function CategoryChip({
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 rounded-full px-6 py-2.5 text-sm font-bold shadow-sm transition ${
+      className={`shrink-0 rounded-full px-6 py-2.5 text-sm md:text-base font-bold shadow-sm transition ${
         active
           ? 'bg-brand-300 text-white'
           : 'bg-brand-100 text-brand-500 hover:bg-brand-75'

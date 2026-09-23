@@ -13,11 +13,15 @@ export class ApiError extends Error {
   }
 }
 
+/** หน้า login รวมของทุก role — ใช้ตอน token หมดอายุแล้วต้องเด้งออก */
+const LOGIN_PATH = '/login'
+
 export async function apiClient<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
   const token = authStorage.getToken()
+  const isLoginRequest = path === '/auth/login'
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,
@@ -28,9 +32,11 @@ export async function apiClient<T>(
     },
   })
 
-  if (res.status === 401) {
+  // 401 ตอน login = รหัสผิด ต้องปล่อยให้หน้า login แสดง error เอง
+  // (เดิมเด้ง window.location ทุกกรณี หน้ารีโหลด error เลยหายก่อนได้แสดง)
+  if (res.status === 401 && !isLoginRequest) {
     authStorage.clear()
-    window.location.href = '/employee/login'
+    window.location.href = LOGIN_PATH
     throw new ApiError(401, 'ยังไม่ได้เข้าสู่ระบบ')
   }
 

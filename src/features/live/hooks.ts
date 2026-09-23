@@ -21,6 +21,7 @@ type ServerEvent =
   | 'payment.voided'
   | 'table-session.created'
   | 'table-session.closed'
+  | 'menu.updated'
 
 /** event ไหนกระทบ query key ไหนบ้าง (ฝั่งพนักงาน) */
 const STAFF_INVALIDATIONS: Record<ServerEvent, readonly string[][]> = {
@@ -35,6 +36,8 @@ const STAFF_INVALIDATIONS: Record<ServerEvent, readonly string[][]> = {
   'payment.voided': [['payments'], ['orders'], ['service-requests'], ['table-sessions'], ['tables'], ['reports']],
   'table-session.created': [['table-sessions'], ['tables']],
   'table-session.closed': [['table-sessions'], ['tables'], ['service-requests']],
+  // ปิดวัตถุดิบเพราะของหมด → เมนู/ตัวเลือกเปลี่ยนทุกจอ
+  'menu.updated': [['menu-items'], ['ingredients'], ['public', 'menu']],
 }
 
 const STAFF_EVENTS = Object.keys(STAFF_INVALIDATIONS) as ServerEvent[]
@@ -120,6 +123,10 @@ export function useCustomerLiveEvents(sessionToken: string | undefined) {
         refetchSession()
       })
       socket.on('table-session.closed', refetchSession)
+      // ของหมด → ตัวเลือกในเมนูหายไป ต้องดึงเมนูใหม่ ไม่งั้นลูกค้ากดสั่งแล้วเจอ error
+      socket.on('menu.updated', () => {
+        qc.invalidateQueries({ queryKey: ['public', 'menu'] })
+      })
     },
     () => {
       const token = sessionToken ?? ''

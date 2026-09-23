@@ -198,7 +198,7 @@ export function EmployeeLayout() {
           type="button"
           onClick={() => {
             signOut()
-            navigate('/employee/login')
+            navigate('/login')
           }}
           className="flex flex-1 items-center justify-center gap-2 py-4 text-lg font-bold text-black transition hover:bg-brand-50 sm:gap-3 sm:text-2xl"
         >

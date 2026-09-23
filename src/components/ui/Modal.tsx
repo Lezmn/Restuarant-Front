@@ -38,7 +38,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+      className="print-shell fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
       onClick={onClose}
     >
       <div
@@ -47,9 +47,9 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-lg border-2 border-gray-300 bg-white p-5 shadow-xl"
+        className="print-shell max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-lg border-2 border-gray-300 bg-white p-5 shadow-xl"
       >
-        <h2 className="mb-4 text-center text-lg font-bold text-black">
+        <h2 className="mb-4 text-center text-lg font-bold text-black print:hidden">
           {title}
         </h2>
         {children}
