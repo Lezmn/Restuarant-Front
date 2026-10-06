@@ -29,7 +29,7 @@ type PageKey =
 export const pageRoles: Record<PageKey, Role[]> = {
   order: [Role.ADMIN, Role.KITCHEN],
   check: [Role.ADMIN, Role.STAFF],
-  manage: [Role.ADMIN],
+  manage: [Role.ADMIN, Role.KITCHEN],
   orders: [Role.ADMIN, Role.STAFF],
   tables: [Role.ADMIN, Role.STAFF],
   requests: [Role.ADMIN, Role.STAFF],
