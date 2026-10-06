@@ -6,7 +6,7 @@ const mapIngredient = (i: ApiIngredient): Ingredient => ({
   id: i.id,
   name: i.name,
   isAvailable: i.isAvailable,
-  /** จำนวนตัวเลือกเมนูที่ผูกอยู่ — 0 = ลบได้ */
+  /** จำนวนตัวเลือกเมนูที่ผูกอยู่ */
   menuOptionCount: i._count?.menuOptions ?? 0,
 })
 
@@ -47,7 +47,10 @@ export async function updateIngredient(vars: {
   return mapIngredient(data)
 }
 
-/** DELETE /ingredients/:id @Roles(ADMIN) — ยังผูกกับเมนูอยู่ backend ตอบ 409 */
+/**
+ * DELETE /ingredients/:id @Roles(ADMIN)
+ * ตัวเลือกเมนูที่ผูกอยู่: ไม่เคยถูกสั่ง → ลบ, เคยถูกสั่งแล้ว → ปิดขาย + ปลดวัตถุดิบ
+ */
 export async function deleteIngredient(id: Id): Promise<void> {
   await apiClient<void>(`/ingredients/${id}`, { method: 'DELETE' })
 }

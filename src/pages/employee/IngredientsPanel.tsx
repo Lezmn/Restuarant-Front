@@ -118,13 +118,8 @@ export function IngredientsPanel() {
 
               <button
                 type="button"
-                disabled={item.menuOptionCount > 0 || remove.isPending}
+                disabled={remove.isPending}
                 onClick={() => setDeleting(item)}
-                title={
-                  item.menuOptionCount > 0
-                    ? 'ปลดออกจากตัวเลือกเมนูก่อนจึงจะลบได้'
-                    : undefined
-                }
                 className="text-sm font-semibold text-danger underline-offset-4 transition hover:underline disabled:cursor-not-allowed disabled:opacity-40"
               >
                 ลบ
@@ -141,6 +136,13 @@ export function IngredientsPanel() {
             <b className="text-black">{deleting.name}</b> ?
             ลบแล้วกู้คืนไม่ได้
           </p>
+          {deleting.menuOptionCount > 0 && (
+            <p className="mt-2 text-sm text-danger">
+              วัตถุดิบนี้ผูกกับ {deleting.menuOptionCount} ตัวเลือกเมนู —
+              ตัวเลือกที่ยังไม่เคยถูกสั่งจะถูกลบ ส่วนที่เคยถูกสั่งแล้วจะถูกปิดขาย
+              (ประวัติออเดอร์ยังอยู่ครบ)
+            </p>
+          )}
 
           <div className="mt-5 grid grid-cols-2 gap-3">
             <button

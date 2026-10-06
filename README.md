@@ -81,7 +81,6 @@ npm run dev
 | `/owner/dashboard` | สรุปรายวัน + กราฟ 7 วัน + สถานะวันนี้ + การแจ้งเตือน |
 | `/owner/finance` | รายรับ-รายจ่าย + ฟอร์มบันทึกรายจ่าย |
 
-> backend ไม่มี role `OWNER` แยก จึงใช้ `ADMIN` ไปก่อน
 
 ### บัญชีทดลอง (จาก `prisma/seed.ts` ฝั่ง backend)
 
@@ -204,10 +203,3 @@ src/
 
 ---
 
-## หมายเหตุด้านความปลอดภัย
-
-`ProtectedRoute` และการหรี่ปุ่มตาม role เป็นการ **กัน UI เท่านั้น ไม่ใช่ security**
-ใครแก้ `localStorage` ก็เปลี่ยน role ตัวเองได้ — ตัวจริงคือ `JwtAuthGuard` + `RolesGuard` ฝั่ง NestJS
-
-สิทธิ์แต่ละหน้าตั้งไว้ที่ `features/auth/permissions.ts` ให้ตรงกับ `@Roles(...)` ของ controller
-ถ้าแก้สิทธิ์ฝั่ง backend อย่าลืมแก้ไฟล์นี้ตาม
