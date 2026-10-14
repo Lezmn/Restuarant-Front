@@ -1,12 +1,16 @@
+import { MAX_ITEM_QUANTITY } from '@/lib/config'
+
 export function QuantityStepper({
   value,
   onChange,
   min = 1,
+  max = MAX_ITEM_QUANTITY,
   size = 'md',
 }: {
   value: number
   onChange: (next: number) => void
   min?: number
+  max?: number
   size?: 'sm' | 'md'
 }) {
   const button =
@@ -34,7 +38,8 @@ export function QuantityStepper({
         type="button"
         aria-label="เพิ่มจำนวน"
         onClick={() => onChange(value + 1)}
-        className={`${button} flex items-center justify-center rounded-full bg-plus font-bold text-white transition`}
+        disabled={value >= max}
+        className={`${button} flex items-center justify-center rounded-full bg-plus font-bold text-white transition disabled:opacity-40`}
       >
         +
       </button>

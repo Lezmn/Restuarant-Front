@@ -130,7 +130,14 @@ export function IngredientsPanel() {
       </div>
 
       {deleting && (
-        <Modal title="ลบวัตถุดิบ" onClose={() => setDeleting(null)}>
+        <Modal
+          title="ลบวัตถุดิบ"
+          onClose={() => {
+            remove.reset()
+            setDeleting(null)
+          }}
+        >
+          <ErrorNote error={remove.error} />
           <p className="text-sm text-gray-700">
             ลบวัตถุดิบ{' '}
             <b className="text-black">{deleting.name}</b> ?

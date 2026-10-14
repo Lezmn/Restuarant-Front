@@ -276,7 +276,11 @@ export function CheckPage() {
         <PaymentDialog
           target={target}
           isSaving={createPayment.isPending}
-          onCancel={() => setTarget(null)}
+          error={createPayment.error}
+          onCancel={() => {
+            createPayment.reset()
+            setTarget(null)
+          }}
           onSubmit={(method, note, amount) =>
             createPayment.mutate(
               {
@@ -306,11 +310,14 @@ const payMethods = [PaymentMethod.CASH, PaymentMethod.PROMPTPAY] as const
 function PaymentDialog({
   target,
   isSaving,
+  error,
   onCancel,
   onSubmit,
 }: {
   target: PayTarget
   isSaving: boolean
+  /** error ต้องโชว์ในกล่องนี้ — ErrorNote ของหน้าอยู่หลัง modal มองไม่เห็น */
+  error: unknown
   onCancel: () => void
   onSubmit: (method: PaymentMethod, note: string, amount: number) => void
 }) {
@@ -344,6 +351,7 @@ function PaymentDialog({
 
   return (
     <Modal title={dialogTitle[method]} onClose={onCancel}>
+      <ErrorNote error={error} />
       <form
         onSubmit={(e) => {
           e.preventDefault()

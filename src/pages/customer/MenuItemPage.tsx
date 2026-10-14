@@ -114,6 +114,7 @@ export function CustomerMenuItemPage() {
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
+            maxLength={200}
             placeholder="เช่น ไม่เผ็ด ไม่ใส่ผัก"
             className="mt-2 w-full resize-none rounded-xl border-2 border-brand-75 p-3 text-sm md:text-base outline-none focus:border-brand-300"
           />

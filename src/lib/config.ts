@@ -20,3 +20,6 @@ export const IS_DEMO_PROMPTPAY = !import.meta.env.VITE_PROMPTPAY_ID
  */
 export const LOGIN_EMAIL_DOMAIN =
   import.meta.env.VITE_LOGIN_EMAIL_DOMAIN ?? 'restaurant.local'
+
+/** ตรงกับ @Max ของ quantity ฝั่ง backend (order-item-input.dto.ts) — เกินนี้ backend ตอบ 400 */
+export const MAX_ITEM_QUANTITY = 99

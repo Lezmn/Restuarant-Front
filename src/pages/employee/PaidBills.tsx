@@ -179,7 +179,11 @@ export function PaidBills() {
         <VoidDialog
           payment={voidTarget}
           isSaving={voidPayment.isPending}
-          onCancel={() => setVoidTarget(null)}
+          error={voidPayment.error}
+          onCancel={() => {
+            voidPayment.reset()
+            setVoidTarget(null)
+          }}
           onConfirm={(reason) =>
             voidPayment.mutate(
               { id: voidTarget.id, reason },
@@ -195,11 +199,14 @@ export function PaidBills() {
 function VoidDialog({
   payment,
   isSaving,
+  error,
   onCancel,
   onConfirm,
 }: {
   payment: Payment
   isSaving: boolean
+  /** error ต้องโชว์ในกล่องนี้ — ErrorNote ของหน้าอยู่หลัง modal มองไม่เห็น */
+  error: unknown
   onCancel: () => void
   onConfirm: (reason: string) => void
 }) {
@@ -207,6 +214,7 @@ function VoidDialog({
 
   return (
     <Modal title="ยกเลิกบิล" onClose={onCancel}>
+      <ErrorNote error={error} />
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -229,9 +237,13 @@ function VoidDialog({
         </p>
 
         <label className="mt-4 block">
-          <span className="text-sm font-semibold text-gray-700">เหตุผล</span>
+          <span className="text-sm font-semibold text-gray-700">
+            เหตุผล<span className="ml-1 text-danger">*</span>
+          </span>
           <textarea
             value={reason}
+            required
+            maxLength={200}
             onChange={(e) => setReason(e.target.value)}
             rows={2}
             placeholder="เช่น กดจ่ายผิดโต๊ะ / ลูกค้าเปลี่ยนวิธีจ่าย"
@@ -249,7 +261,8 @@ function VoidDialog({
           </button>
           <button
             type="submit"
-            disabled={isSaving}
+            // ต้องมีเหตุผลทุกครั้ง — backend ก็บังคับไว้ (เจ้าของต้องไล่ดูย้อนหลังได้)
+            disabled={isSaving || !reason.trim()}
             className="rounded bg-danger py-2.5 font-bold text-white transition hover:brightness-95 disabled:opacity-60"
           >
             {isSaving ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกบิล'}

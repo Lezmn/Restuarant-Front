@@ -51,11 +51,14 @@ export async function getPayment(id: Id): Promise<Payment> {
  */
 export async function voidPayment(vars: {
   id: Id
-  reason?: string
+  /** บังคับ — backend ตอบ 400 ถ้าว่าง */
+  reason: string
 }): Promise<Payment> {
+  const reason = vars.reason.trim()
+  if (!reason) throw new Error('ต้องระบุเหตุผลที่ยกเลิกบิล')
   const data = await apiClient<ApiPayment>(`/payments/${vars.id}/void`, {
     method: 'PATCH',
-    body: JSON.stringify(vars.reason ? { reason: vars.reason } : {}),
+    body: JSON.stringify({ reason }),
   })
   return mapPayment(data)
 }
