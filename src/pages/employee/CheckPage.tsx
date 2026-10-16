@@ -16,6 +16,7 @@ import {
   TableSessionStatus,
 } from '@/types/enums'
 import type { Id, Payment } from '@/types/models'
+import { CashDrawerBar } from './CashDrawerBar'
 import { PaidBills } from './PaidBills'
 import { ReceiptDialog } from './ReceiptDialog'
 import { QRCodeSVG } from 'qrcode.react'
@@ -117,6 +118,8 @@ export function CheckPage() {
 
   return (
     <div>
+      <CashDrawerBar />
+
       <ErrorNote error={createPayment.error ?? closeSession.error} />
 
       {isPending && <p className="text-sm text-gray-500">กำลังโหลด...</p>}

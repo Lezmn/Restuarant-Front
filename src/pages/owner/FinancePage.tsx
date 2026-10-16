@@ -202,7 +202,15 @@ export function FinancePage() {
                   <td className="px-4 py-3 text-sm text-gray-700">
                     {thaiDate(tx.date)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-black">{tx.detail}</td>
+                  <td className="px-4 py-3 text-sm text-black">
+                    {tx.detail}
+                    {tx.paidFromDrawer && (
+                      <span className="block text-xs text-gray-500">
+                        หยิบจากลิ้นชัก
+                        {tx.createdByName && ` · โดย ${tx.createdByName}`}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${categoryTone[tx.category]}`}

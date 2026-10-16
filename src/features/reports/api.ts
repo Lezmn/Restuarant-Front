@@ -113,6 +113,8 @@ export async function getFinance(month: string): Promise<FinanceData> {
       category: t.category,
       // ตารางรวมรายรับ-รายจ่ายไว้ด้วยกัน จึงเก็บรายจ่ายเป็นค่าลบ
       amount: t.type === 'EXPENSE' ? -t.amount : t.amount,
+      paidFromDrawer: t.paidFromDrawer,
+      createdByName: t.createdByName,
     })),
   }
 }

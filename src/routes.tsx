@@ -105,6 +105,9 @@ const DashboardPage = lazy(() =>
 const FinancePage = lazy(() =>
   import('@/pages/owner/FinancePage').then((m) => ({ default: m.FinancePage })),
 )
+const CashClosesPage = lazy(() =>
+  import('@/pages/owner/CashClosesPage').then((m) => ({ default: m.CashClosesPage })),
+)
 
 /** ครอบ Suspense ให้ทุก element ที่โหลดแบบ lazy กันจอว่างระหว่างดึงไฟล์ */
 const s = (node: ReactNode) => (
@@ -204,6 +207,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/owner/dashboard" replace /> },
           { path: 'dashboard', element: s(<DashboardPage />) },
           { path: 'finance', element: s(<FinancePage />) },
+          { path: 'cash-closes', element: s(<CashClosesPage />) },
         ],
       },
     ],

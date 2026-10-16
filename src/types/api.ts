@@ -205,6 +205,8 @@ export interface ApiIncomeExpenseReport {
         title: string
         category: PaymentMethod
         amount: number
+        paidFromDrawer: false
+        createdByName: null
       }
     | {
         type: 'EXPENSE'
@@ -213,6 +215,10 @@ export interface ApiIncomeExpenseReport {
         title: string
         category: ExpenseCategory
         amount: number
+        /** พนักงานหยิบเงินสดจากลิ้นชักไปจ่าย */
+        paidFromDrawer: boolean
+        /** null = รายการเก่าก่อนมีการเก็บผู้บันทึก */
+        createdByName: string | null
       }
   )[]
 }
@@ -225,4 +231,48 @@ export interface ApiExpense {
   category: ExpenseCategory
   note: string | null
   spentAt: string
+  paidFromDrawer: boolean
+  createdByName: string | null
+}
+
+/** รายการหยิบเงินออกจากลิ้นชักของวัน (ใน preview ปิดยอด) */
+export interface ApiDrawerExpenseItem {
+  id: string
+  title: string
+  amount: number
+  spentAt: string
+  createdByName: string | null
+}
+
+/** POST /cash-closes, GET /cash-closes — date เป็น YYYY-MM-DD */
+export interface ApiCashClose {
+  id: string
+  date: string
+  openingFloat: number
+  cashSales: number
+  drawerExpenses: number
+  expectedCash: number
+  countedCash: number
+  /** countedCash - expectedCash: บวก = เงินเกิน, ลบ = เงินขาด */
+  difference: number
+  promptpaySales: number
+  note: string | null
+  closedAt: string
+  closedById: string | null
+  closedByName: string
+}
+
+/** GET /cash-closes/preview?date= @Roles(ADMIN, STAFF) */
+export interface ApiCashClosePreview {
+  date: string
+  cashSales: number
+  promptpaySales: number
+  drawerExpenses: number
+  paymentCount: number
+  drawerExpenseItems: ApiDrawerExpenseItem[]
+  /** โต๊ะที่ยังมีออเดอร์ค้างจ่าย — ปิดยอดก่อน เงินที่เก็บทีหลังจะไม่อยู่ในยอดวันนี้ */
+  unpaidTableCount: number
+  /** เงินทอนตั้งต้นของการปิดยอดครั้งก่อน ไว้เติมให้ */
+  suggestedOpeningFloat: number | null
+  alreadyClosed: ApiCashClose | null
 }

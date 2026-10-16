@@ -52,6 +52,9 @@ export interface Transaction {
   category: PaymentMethod | ExpenseCategory
   /** บวก = รายรับ, ลบ = รายจ่าย */
   amount: number
+  /** รายจ่ายที่พนักงานหยิบเงินสดจากลิ้นชักไปจ่าย */
+  paidFromDrawer: boolean
+  createdByName: string | null
 }
 
 export interface FinanceSummary {
