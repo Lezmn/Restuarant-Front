@@ -39,8 +39,11 @@ function formatTarget(id: string) {
   // เลขประจำตัวประชาชน / เลขผู้เสียภาษี
   if (digits.length === 13) return { tag: '02', value: digits }
 
-  // เบอร์มือถือ
-  const mobile = digits.replace(/^0/, '')
+  // เบอร์มือถือ — รับได้ทั้ง 0812345678 / +66812345678 / 66812345678
+  // เดิมตัดแค่ 0 หน้า เลยได้ 0066 + 66812345678 = 15 หลัก แอปธนาคารหาบัญชีไม่เจอ
+  const mobile = digits.startsWith('66') && digits.length === 11
+    ? digits.slice(2)
+    : digits.replace(/^0/, '')
   return { tag: '01', value: `0066${mobile}`.padStart(13, '0') }
 }
 

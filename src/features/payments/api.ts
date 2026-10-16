@@ -13,6 +13,8 @@ import type { Id, Payment } from '@/types/models'
 export async function createPayment(vars: {
   tableSessionId: Id
   method: PaymentMethod
+  /** ยอดบิลที่หน้าจอแสดงอยู่ (ก่อนส่วนลด) — backend ตอบ 409 ถ้ายอดจริงเปลี่ยนไประหว่างเปิดหน้ารับเงิน */
+  expectedTotal: number
   /** ยอดที่เก็บจริง — ไม่ส่ง = เต็มบิล ส่วนต่างบันทึกเป็นส่วนลดในใบเสร็จ */
   amount?: number
   /** POST /payments ไม่ได้ส่ง tableSession กลับมา จึงต้องส่งชื่อโต๊ะมาเติมในใบเสร็จเอง */
@@ -25,6 +27,7 @@ export async function createPayment(vars: {
     body: JSON.stringify({
       tableSessionId: vars.tableSessionId,
       method: vars.method,
+      expectedTotal: vars.expectedTotal,
       ...(vars.amount === undefined ? {} : { amount: vars.amount }),
       ...(vars.note ? { note: vars.note } : {}),
     }),
@@ -33,8 +36,15 @@ export async function createPayment(vars: {
 }
 
 /** GET /payments @Roles(ADMIN, STAFF) — รายการบิลทั้งหมด ล่าสุดก่อน (ไม่มี items ของใบเสร็จ) */
-export async function getPayments(): Promise<Payment[]> {
-  const data = await apiClient<ApiPayment[]>('/payments')
+export async function getPayments(range?: {
+  from: Date
+  to: Date
+}): Promise<Payment[]> {
+  // ส่งช่วงเวลาไปให้ backend กรอง — ไม่งั้นได้บิลทั้งประวัติร้านมาทุกครั้งที่หน้าจอรีเฟรช
+  const query = range
+    ? `?from=${encodeURIComponent(range.from.toISOString())}&to=${encodeURIComponent(range.to.toISOString())}`
+    : ''
+  const data = await apiClient<ApiPayment[]>(`/payments${query}`)
   return data.map((p) => mapPayment(p))
 }
 

@@ -5,15 +5,28 @@ import type { Id } from '@/types/models'
 
 export const paymentKeys = {
   all: ['payments'] as const,
+  today: (dayStart: string) => ['payments', 'today', dayStart] as const,
   detail: (id: Id) => ['payments', id] as const,
 }
 
-export const usePayments = () =>
-  useQuery({
-    queryKey: paymentKeys.all,
-    queryFn: getPayments,
+/** ช่วง [เที่ยงคืนวันนี้, เที่ยงคืนพรุ่งนี้) ตามเวลาเครื่อง */
+function todayRange() {
+  const from = new Date()
+  from.setHours(0, 0, 0, 0)
+  const to = new Date(from)
+  to.setDate(to.getDate() + 1)
+  return { from, to }
+}
+
+/** บิลของวันนี้ — key ผูกกับวันที่ ข้ามเที่ยงคืนแล้วจะดึงชุดของวันใหม่เอง */
+export const useTodayPayments = () => {
+  const range = todayRange()
+  return useQuery({
+    queryKey: paymentKeys.today(range.from.toISOString()),
+    queryFn: () => getPayments(range),
     staleTime: LIVE_STALE_TIME,
   })
+}
 
 export const usePayment = (id: Id | undefined) =>
   useQuery({

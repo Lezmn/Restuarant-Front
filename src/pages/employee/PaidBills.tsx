@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Pagination } from '@/components/ui/Pagination'
 import {
   usePayment,
-  usePayments,
+  useTodayPayments,
   useVoidPayment,
 } from '@/features/payments/hooks'
 import { formatBaht, formatTime } from '@/lib/format'
@@ -32,7 +32,7 @@ const isToday = (iso: string) =>
  * ยกเลิกแล้ว backend จะคืนออเดอร์เป็นเสิร์ฟแล้วและเปิดโต๊ะกลับ → โต๊ะจะกลับมาโผล่ในตารางด้านบน
  */
 export function PaidBills() {
-  const { data: payments, isPending } = usePayments()
+  const { data: payments, isPending } = useTodayPayments()
   const voidPayment = useVoidPayment()
 
   const [viewId, setViewId] = useState<Id | null>(null)
@@ -41,6 +41,7 @@ export function PaidBills() {
   // GET /payments ไม่ส่ง items มา ต้องดึงทีละใบตอนจะเปิดใบเสร็จ
   const { data: viewing } = usePayment(viewId ?? undefined)
 
+  // backend กรองให้แล้ว กรองซ้ำกันไว้เผื่อเปิดจอค้างข้ามเที่ยงคืน
   const today = (payments ?? []).filter((p) => isToday(p.paidAt))
   // วันที่ขายดีจะมีหลายสิบบิล ตัดเป็นหน้า ๆ ไม่งั้นตารางยาวจนหาโต๊ะด้านบนไม่เจอ
   const paged = usePagination(today)

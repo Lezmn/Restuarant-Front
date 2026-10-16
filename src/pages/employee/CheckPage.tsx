@@ -158,7 +158,11 @@ export function CheckPage() {
                 checkout,
               }) => {
                 // ถ้าลูกค้ายังไม่ได้กดเช็คบิล พนักงานก็เปิดบิลเองได้ ตั้งต้นเป็นเงินสด
-                const method = checkout?.paymentMethod ?? PaymentMethod.CASH
+                // คำขอเก่าอาจเป็น CARD ที่ร้านเลิกรับแล้ว (backend ไม่รับ) — ถือว่ายังไม่ได้เลือก
+                const customerMethod = payMethods.find(
+                  (m) => m === checkout?.paymentMethod,
+                )
+                const method = customerMethod ?? PaymentMethod.CASH
                 // ไม่มีอะไรให้เก็บเงินแล้ว (ยกเลิกหมด/เปิดโต๊ะทิ้งไว้) — ต้องปิดโต๊ะได้
                 // ไม่งั้นโต๊ะค้าง OCCUPIED ตลอดไป เปิด QR ใหม่ก็ไม่ได้
                 const nothingToCharge = unpaid.length === 0
@@ -180,11 +184,11 @@ export function CheckPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {checkout?.paymentMethod ? (
+                      {customerMethod ? (
                         <span
-                          className={`font-semibold ${methodColor[checkout.paymentMethod]}`}
+                          className={`font-semibold ${methodColor[customerMethod]}`}
                         >
-                          {methodLabel[checkout.paymentMethod]}
+                          {methodLabel[customerMethod]}
                         </span>
                       ) : (
                         <span className="text-gray-500">ลูกค้ายังไม่ได้เลือก</span>
@@ -230,9 +234,7 @@ export function CheckPage() {
                               tableName: session.tableName,
                               method,
                               amountDue: outstanding,
-                              chosenByCustomer: Boolean(
-                                checkout?.paymentMethod,
-                              ),
+                              chosenByCustomer: Boolean(customerMethod),
                             })
                           }
                           title="บันทึกการชำระเงิน"
@@ -288,6 +290,8 @@ export function CheckPage() {
                 method,
                 tableName: target.tableName,
                 note,
+                // ยอดที่ลูกค้าเห็นบนจอ/QR — ถ้ายอดจริงเปลี่ยนไประหว่างนี้ backend จะไม่ยอมบันทึก
+                expectedTotal: target.amountDue,
                 // เท่ากับยอดบิลก็ไม่ต้องส่ง ปล่อยให้ backend คิดเองเหมือนเดิม
                 amount: amount === target.amountDue ? undefined : amount,
               },
@@ -366,25 +370,29 @@ function PaymentDialog({
           </span>
         </p>
 
-        {/* ถ้าลูกค้าเลือกวิธีจ่ายมาแล้วก็ใช้ตามนั้น ไม่ต้องมีปุ่มให้กดเพิ่ม */}
-        {!target.chosenByCustomer && (
-          <div className="mb-4 grid grid-cols-2 gap-3">
-            {payMethods.map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMethod(m)}
-                className={`rounded-lg border-2 py-2.5 text-sm font-bold transition ${
-                  method === m
-                    ? `border-current ${methodColor[m]} bg-brand-50`
-                    : 'border-gray-300 text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                {methodLabel[m]}
-              </button>
-            ))}
-          </div>
+        {/* เลือกได้เสมอ — ลูกค้าอาจกดเช็คบิลเลือก PromptPay ไว้ แต่มาจ่ายเงินสดจริง
+            เดิมซ่อนปุ่มไว้เลยต้องบันทึกผิดวิธี ยอดแยกตามวิธีจ่ายในรายงานก็ผิดตาม */}
+        {target.chosenByCustomer && (
+          <p className="mb-2 text-xs text-gray-500">
+            ลูกค้าเลือก {methodLabel[target.method] ?? target.method} ไว้ — เปลี่ยนได้ถ้าจ่ายจริงต่างจากนี้
+          </p>
         )}
+        <div className="mb-4 grid grid-cols-2 gap-3">
+          {payMethods.map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMethod(m)}
+              className={`rounded-lg border-2 py-2.5 text-sm font-bold transition ${
+                method === m
+                  ? `border-current ${methodColor[m]} bg-brand-50`
+                  : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              {methodLabel[m]}
+            </button>
+          ))}
+        </div>
 
         {isPromptPay && (
           <div className="mb-4 flex flex-col items-center rounded-xl border-2 border-promptpay/30 bg-promptpay/5 p-4">
@@ -467,6 +475,12 @@ function PaymentDialog({
               placeholder="ไม่กรอกก็ได้"
               className="mt-1 w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 outline-none focus:border-brand-300 focus:bg-white"
             />
+            {/* ยังบันทึกได้ (ช่องนี้ไว้คิดเงินทอนเฉย ๆ) แต่ต้องเตือนให้เห็น จะได้ไม่ปล่อยลูกค้าไปทั้งที่เงินขาด */}
+            {Number(received) > 0 && change < 0 && (
+              <span className="mt-1 block text-right text-sm font-semibold text-danger">
+                รับเงินมาไม่พอ ขาดอีก {formatBaht(-change)}
+              </span>
+            )}
             {change > 0 && (
               <span className="mt-1 block text-right text-sm font-semibold text-brand-400">
                 เงินทอน {formatBaht(change)}
@@ -494,6 +508,7 @@ function PaymentDialog({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
+            maxLength={500}
             placeholder="พิมพ์ลงบนใบเสร็จ และเก็บไว้ในระบบ"
             className="mt-1 w-full resize-none rounded border border-gray-300 bg-gray-100 px-3 py-2 outline-none focus:border-brand-300 focus:bg-white"
           />
