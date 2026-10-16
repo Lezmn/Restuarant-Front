@@ -186,7 +186,7 @@ export function ManagePage() {
                     <button
                       type="button"
                       onClick={() => setEditing(item)}
-                      className="rounded-lg border-2 border-brand-300 py-1.5 text-xs font-bold text-brand-400 transition hover:bg-brand-50"
+                      className="min-h-10 rounded-lg border-2 border-brand-300 py-2 text-sm font-bold text-brand-400 transition hover:bg-brand-50"
                     >
                       แก้ไข
                     </button>
@@ -194,7 +194,7 @@ export function ManagePage() {
                       type="button"
                       disabled={deleteItem.isPending}
                       onClick={() => setDeleting(item)}
-                      className="rounded-lg border-2 border-danger py-1.5 text-xs font-bold text-danger transition hover:bg-danger/10 disabled:opacity-60"
+                      className="min-h-10 rounded-lg border-2 border-danger py-2 text-sm font-bold text-danger transition hover:bg-danger/10 disabled:opacity-60"
                     >
                       ลบ
                     </button>
@@ -276,7 +276,7 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${
+      className={`min-h-10 rounded-full px-4 py-2 text-sm font-bold transition ${
         active
           ? 'bg-brand-400 text-white'
           : 'bg-gray-100 text-gray-700 hover:bg-brand-50 hover:text-brand-400'
@@ -330,15 +330,20 @@ function Switch({
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-60 ${
-        checked ? 'bg-brand-400' : 'bg-gray-300'
-      }`}
+      // ปุ่มจริงใหญ่ 40×56 (พื้นที่กดบน iPad) ตัวสวิตช์ที่เห็นอยู่ข้างใน
+      className="flex h-10 w-14 shrink-0 items-center justify-center disabled:opacity-60"
     >
       <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
-          checked ? 'left-[22px]' : 'left-0.5'
+        className={`relative block h-7 w-12 rounded-full transition ${
+          checked ? 'bg-brand-400' : 'bg-gray-300'
         }`}
-      />
+      >
+        <span
+          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
+            checked ? 'left-[22px]' : 'left-0.5'
+          }`}
+        />
+      </span>
     </button>
   )
 }

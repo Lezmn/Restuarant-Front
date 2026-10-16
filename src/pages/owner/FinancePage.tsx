@@ -119,7 +119,8 @@ export function FinancePage() {
         <StatCard
           label="กำไรสุทธิ"
           value={formatBaht(summary.netProfit)}
-          tone="green"
+          // ขาดทุนต้องเป็นสีแดง — เดิมเขียวตลอด เห็น -฿39,760 เป็นสีเขียวชวนเข้าใจผิด
+          tone={summary.netProfit < 0 ? 'red' : 'green'}
           size="lg"
         />
         <StatCard
@@ -162,7 +163,7 @@ export function FinancePage() {
             key={f.key}
             type="button"
             onClick={() => setFilter(f.key)}
-            className={`rounded-full border-2 px-4 py-1.5 text-sm font-semibold transition ${
+            className={`min-h-10 rounded-full border-2 px-4 py-1.5 text-sm font-semibold transition ${
               filter === f.key
                 ? 'border-brand-400 bg-brand-400 text-white'
                 : 'border-brand-400 bg-white text-brand-400 hover:bg-brand-50'
@@ -199,7 +200,7 @@ export function FinancePage() {
 
               {paged.pageItems.map((tx) => (
                 <tr key={tx.id}>
-                  <td className="px-4 py-3 text-sm text-gray-700">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
                     {thaiDate(tx.date)}
                   </td>
                   <td className="px-4 py-3 text-sm text-black">
@@ -213,13 +214,13 @@ export function FinancePage() {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${categoryTone[tx.category]}`}
+                      className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${categoryTone[tx.category]}`}
                     >
                       {categoryLabel[tx.category]}
                     </span>
                   </td>
                   <td
-                    className={`px-4 py-3 text-right text-sm font-bold ${
+                    className={`whitespace-nowrap px-4 py-3 text-right text-sm font-bold ${
                       tx.amount < 0 ? 'text-danger' : 'text-success'
                     }`}
                   >
@@ -229,21 +230,21 @@ export function FinancePage() {
                   <td className="px-4 py-3 text-center">
                     {/* รายรับมาจากบิลที่เก็บเงินไปแล้ว แก้ที่นี่ไม่ได้ — ต้องไปยกเลิกบิลที่หน้า Check */}
                     {tx.type === 'EXPENSE' ? (
-                      <div className="flex items-center justify-center gap-3">
+                      <div className="flex items-center justify-center gap-1">
                         <button
                           type="button"
                           onClick={() => {
                             setFormOpen(false)
                             setEditing(tx)
                           }}
-                          className="text-sm font-semibold text-brand-400 underline-offset-4 transition hover:underline"
+                          className="min-h-10 rounded-lg px-3 text-sm font-semibold text-brand-400 underline-offset-4 transition hover:bg-brand-50 hover:underline"
                         >
                           แก้ไข
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeleting(tx)}
-                          className="text-sm font-semibold text-danger underline-offset-4 transition hover:underline"
+                          className="min-h-10 rounded-lg px-3 text-sm font-semibold text-danger underline-offset-4 transition hover:bg-danger/5 hover:underline"
                         >
                           ลบ
                         </button>

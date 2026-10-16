@@ -40,7 +40,13 @@ function KitchenItemRow({
         columnKey === 'done' ? 'text-gray-400' : ''
       }`}
     >
-      <div className="flex items-center justify-between gap-2">
+      {/* คอลัมน์กำลังปรุง: ทั้งแถวเป็น label แตะตรงไหนก็ติ๊กได้
+          จอครัวบน iPad มือเปียก/ใส่ถุงมือ เล็ง checkbox 20px ไม่ไหว */}
+      <label
+        className={`flex min-h-8 items-center justify-between gap-2 ${
+          columnKey === 'cooking' ? 'cursor-pointer' : ''
+        }`}
+      >
         <span className="text-sm">
           <span className="font-bold">{item.quantity}</span> {item.menuItemName}
           {item.optionNames.length > 0 && (
@@ -54,10 +60,10 @@ function KitchenItemRow({
             aria-label={`ทำ ${item.menuItemName} แล้ว`}
             checked={checked}
             onChange={(e) => onToggle(e.target.checked)}
-            className="h-5 w-5 shrink-0 accent-brand-300"
+            className="h-6 w-6 shrink-0 accent-brand-300"
           />
         )}
-      </div>
+      </label>
 
       {item.note && columnKey !== 'done' && (
         <p className="mt-0.5 flex items-center gap-1 text-sm text-status-queue">
@@ -154,16 +160,18 @@ export function OrderPage() {
           return (
             <section key={column.key} className="md:px-3">
               <header className="mb-3 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className={`h-3.5 w-3.5 rounded-full ${column.dot}`} />
-                  <h2 className="text-lg font-bold text-black sm:text-xl">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className={`h-3.5 w-3.5 shrink-0 rounded-full ${column.dot}`} />
+                  <h2 className="truncate text-base font-bold text-black lg:text-xl">
                     {column.title}
                   </h2>
                 </div>
                 <span
-                  className={`rounded-full px-3 py-1 text-sm font-bold ${column.badge}`}
+                  className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-sm font-bold ${column.badge}`}
                 >
-                  {list.length} รายการ
+                  {list.length}
+                  {/* iPad แนวตั้ง 3 คอลัมน์แคบ — ตัดคำว่า "รายการ" ออก ชื่อคอลัมน์จะได้ไม่โดนตัด */}
+                  <span className="hidden lg:inline"> รายการ</span>
                 </span>
               </header>
 
@@ -216,7 +224,7 @@ export function OrderPage() {
                       type="button"
                       disabled={updateStatus.isPending}
                       onClick={() => setCancelling(order)}
-                      className="mt-2 w-full rounded-lg border border-gray-300 py-2 text-xs font-semibold text-gray-600 transition hover:border-danger hover:text-danger disabled:opacity-60"
+                      className="mt-2 min-h-10 w-full rounded-lg border border-gray-300 py-2 text-sm font-semibold text-gray-600 transition hover:border-danger hover:text-danger disabled:opacity-60"
                     >
                       ยกเลิกออเดอร์
                     </button>

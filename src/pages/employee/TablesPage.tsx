@@ -1,4 +1,5 @@
 import { Badge, type BadgeTone } from '@/components/ui/Badge'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorNote } from '@/components/ui/ErrorNote'
 import { Modal } from '@/components/ui/Modal'
 import { pageRoles } from '@/features/auth/permissions'
@@ -39,6 +40,8 @@ export function TablesPage() {
   const closeSession = useCloseSession()
   const [qrTarget, setQrTarget] = useState<TableSession | null>(null)
   const [orderTarget, setOrderTarget] = useState<TableSession | null>(null)
+  // ปิดโต๊ะย้อนกลับไม่ได้ (QR ใช้ไม่ได้อีก) — ถามก่อนเหมือนหน้า Check
+  const [closeTarget, setCloseTarget] = useState<TableSession | null>(null)
 
   // เปิดโต๊ะได้เฉพาะ ADMIN/STAFF ตาม @Roles ของ POST /table-sessions
   const canOpen = Boolean(user && pageRoles.openTable.includes(user.role))
@@ -50,7 +53,7 @@ export function TablesPage() {
 
   return (
     <div>
-      <ErrorNote error={openSession.error ?? closeSession.error} />
+      <ErrorNote error={openSession.error} />
 
       <p className="mb-4 text-sm text-gray-600">
         เปิดโต๊ะเพื่อสร้าง QR ให้ลูกค้าสแกนสั่งอาหาร · ปิดโต๊ะเมื่อลูกค้ากลับแล้ว
@@ -101,7 +104,7 @@ export function TablesPage() {
                   <button
                     type="button"
                     disabled={closeSession.isPending}
-                    onClick={() => closeSession.mutate(session.id)}
+                    onClick={() => setCloseTarget(session)}
                     className="mt-2 w-full rounded-lg border-2 border-danger py-2 text-sm font-bold text-danger transition hover:bg-danger/10 disabled:opacity-60"
                   >
                     ปิดโต๊ะ
@@ -130,6 +133,28 @@ export function TablesPage() {
 
       {qrTarget && (
         <QrDialog session={qrTarget} onClose={() => setQrTarget(null)} />
+      )}
+
+      {closeTarget && (
+        <ConfirmDialog
+          title="ปิดโต๊ะ"
+          subject={`โต๊ะ ${closeTarget.tableName}`}
+          consequence="QR ของโต๊ะนี้จะใช้สั่งอาหารไม่ได้อีก — ถ้ายังมียอดค้างชำระระบบจะไม่ยอมปิด ให้เก็บเงินที่หน้า Check ก่อน"
+          confirmLabel="ปิดโต๊ะ"
+          pendingLabel="กำลังปิด..."
+          tone="brand"
+          isPending={closeSession.isPending}
+          error={closeSession.error}
+          onCancel={() => {
+            closeSession.reset()
+            setCloseTarget(null)
+          }}
+          onConfirm={() =>
+            closeSession.mutate(closeTarget.id, {
+              onSuccess: () => setCloseTarget(null),
+            })
+          }
+        />
       )}
 
       {orderTarget && (

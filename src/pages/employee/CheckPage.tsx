@@ -1,3 +1,4 @@
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorNote } from '@/components/ui/ErrorNote'
 import { Modal } from '@/components/ui/Modal'
 import { useOrders } from '@/features/orders/hooks'
@@ -15,7 +16,7 @@ import {
   ServiceRequestType,
   TableSessionStatus,
 } from '@/types/enums'
-import type { Id, Payment } from '@/types/models'
+import type { Id, Payment, TableSession } from '@/types/models'
 import { CashDrawerBar } from './CashDrawerBar'
 import { PaidBills } from './PaidBills'
 import { ReceiptDialog } from './ReceiptDialog'
@@ -66,6 +67,11 @@ export function CheckPage() {
   const [target, setTarget] = useState<PayTarget | null>(null)
   /** ใบเสร็จที่เพิ่งออก — เปิดให้พิมพ์ทันทีหลังรับเงิน */
   const [receipt, setReceipt] = useState<Payment | null>(null)
+  /** โต๊ะที่กำลังจะปิด — ยืนยันใน popup แบบเดียวกับหน้าอื่น (เดิมใช้ confirm() ของเบราว์เซอร์) */
+  const [closing, setClosing] = useState<{
+    session: TableSession
+    neverOrdered: boolean
+  } | null>(null)
 
   const openSessions = (sessions ?? []).filter(
     (s) => s.status === TableSessionStatus.OPEN,
@@ -120,7 +126,7 @@ export function CheckPage() {
     <div>
       <CashDrawerBar />
 
-      <ErrorNote error={createPayment.error ?? closeSession.error} />
+      <ErrorNote error={createPayment.error} />
 
       {isPending && <p className="text-sm text-gray-500">กำลังโหลด...</p>}
 
@@ -202,17 +208,9 @@ export function CheckPage() {
                         <button
                           type="button"
                           disabled={closeSession.isPending}
-                          onClick={() => {
-                            if (
-                              confirm(
-                                `ปิดโต๊ะ ${session.tableName} ? (ไม่มียอดค้างชำระแล้ว)`,
-                              )
-                            ) {
-                              closeSession.mutate(session.id)
-                            }
-                          }}
+                          onClick={() => setClosing({ session, neverOrdered })}
                           title="ไม่มียอดต้องเก็บ — ปิดโต๊ะเพื่อคืนโต๊ะให้ว่าง"
-                          className="cursor-pointer rounded font-semibold text-gray-600 underline-offset-4 transition hover:text-brand-400 hover:underline disabled:opacity-60"
+                          className="min-h-10 cursor-pointer rounded-lg px-3 font-semibold text-gray-600 underline-offset-4 transition hover:text-brand-400 hover:underline disabled:opacity-60"
                         >
                           <span className="block text-xs font-normal text-gray-500">
                             {neverOrdered
@@ -241,7 +239,7 @@ export function CheckPage() {
                             })
                           }
                           title="บันทึกการชำระเงิน"
-                          className={`inline-flex cursor-pointer items-center gap-1.5 rounded font-semibold underline-offset-4 transition hover:underline focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:outline-none ${
+                          className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-lg px-3 font-semibold underline-offset-4 transition hover:underline focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:outline-none ${
                             methodColor[method]
                           } ${methodHover[method]}`}
                         >
@@ -272,6 +270,33 @@ export function CheckPage() {
       </div>
 
       <PaidBills />
+
+      {closing && (
+        <ConfirmDialog
+          title="ปิดโต๊ะ"
+          subject={`โต๊ะ ${closing.session.tableName}`}
+          detail={
+            closing.neverOrdered
+              ? 'ยังไม่ได้สั่งอาหาร'
+              : 'เก็บเงินครบแล้ว ไม่มียอดค้างชำระ'
+          }
+          consequence="QR ของโต๊ะนี้จะใช้สั่งอาหารไม่ได้อีก และโต๊ะจะกลับเป็นว่าง"
+          confirmLabel="ปิดโต๊ะ"
+          pendingLabel="กำลังปิด..."
+          tone="brand"
+          isPending={closeSession.isPending}
+          error={closeSession.error}
+          onCancel={() => {
+            closeSession.reset()
+            setClosing(null)
+          }}
+          onConfirm={() =>
+            closeSession.mutate(closing.session.id, {
+              onSuccess: () => setClosing(null),
+            })
+          }
+        />
+      )}
 
       {receipt && (
         <ReceiptDialog payment={receipt} onClose={() => setReceipt(null)} />

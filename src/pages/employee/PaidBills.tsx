@@ -137,18 +137,19 @@ export function PaidBills() {
                         )}
                       </span>
                     ) : (
-                      <div className="flex items-center justify-center gap-4">
+                      // ปุ่มหน้าตาเหมือนลิงก์ แต่พื้นที่กดสูง 40px — บน iPad ข้อความ 20px นิ้วกดพลาดไปโดนอีกปุ่มง่าย
+                      <div className="flex items-center justify-center gap-1">
                         <button
                           type="button"
                           onClick={() => setViewId(p.id)}
-                          className="text-sm font-semibold text-brand-400 underline-offset-4 transition hover:underline"
+                          className="min-h-10 rounded-lg px-3 text-sm font-semibold text-brand-400 underline-offset-4 transition hover:bg-brand-50 hover:underline"
                         >
                           ใบเสร็จ
                         </button>
                         <button
                           type="button"
                           onClick={() => setVoidTarget(p)}
-                          className="text-sm font-semibold text-danger underline-offset-4 transition hover:underline"
+                          className="min-h-10 rounded-lg px-3 text-sm font-semibold text-danger underline-offset-4 transition hover:bg-danger/5 hover:underline"
                         >
                           ยกเลิกบิล
                         </button>
