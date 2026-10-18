@@ -7,7 +7,7 @@ import { submitLogin } from '../helpers'
 test('login ด้วยบัญชี admin สำเร็จ ต้องถูกพาไปหน้า order (homeByRole ของ ADMIN)', async ({
   page,
 }) => {
-  await page.goto('/employee/login')
+  await page.goto('/login')
 
   await submitLogin(page, 'admin', 'ChangeMe123!')
 
@@ -16,20 +16,20 @@ test('login ด้วยบัญชี admin สำเร็จ ต้องถ
   console.log('login ด้วยบัญชี admin สำเร็จ ต้องถูกพาไปหน้า order (homeByRole ของ ADMIN) ✅')
 })
 
-test('login ด้วยบัญชี waiter (STAFF) สำเร็จ ต้องถูกพาไปหน้า check', async ({ page }) => {
-  await page.goto('/employee/login')
+test('login ด้วยบัญชี staff (STAFF) สำเร็จ ต้องถูกพาไปหน้า check', async ({ page }) => {
+  await page.goto('/login')
 
-  await submitLogin(page, 'waiter', 'ChangeMe123!')
+  await submitLogin(page, 'staff', 'ChangeMe123!')
 
   // STAFF ไป /employee/check ตาม homeByRole
   await expect(page).toHaveURL(/\/employee\/check$/)
-  console.log('login ด้วยบัญชี waiter (STAFF) สำเร็จ ต้องถูกพาไปหน้า check ✅')
+  console.log('login ด้วยบัญชี staff (STAFF) สำเร็จ ต้องถูกพาไปหน้า check ✅')
 })
 
 test('login ด้วยบัญชี kitchen (KITCHEN) สำเร็จ ต้องถูกพาไปหน้า kitchen', async ({
   page,
 }) => {
-  await page.goto('/employee/login')
+  await page.goto('/login')
 
   await submitLogin(page, 'kitchen', 'ChangeMe123!')
 

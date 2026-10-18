@@ -2,8 +2,9 @@ import { test, expect } from '@playwright/test'
 import { loginAsCashier } from '../helpers'
 
 // ⚠️ ต้องรัน backend จริง + seed data ที่ localhost:3000
-// เทสนี้สมมติว่าตอนเริ่มยังไม่มีโต๊ะไหนเปิดอยู่เลย (โต๊ะว่างครบ 6 โต๊ะ)
-// และเปิดโต๊ะจริงผ่าน UI จึงต้องปิดโต๊ะคืนท้ายเทส ไม่งั้นรันซ้ำจะนับโต๊ะว่างผิด
+// เดิมสมมติว่าโต๊ะว่างครบ 6 โต๊ะ แต่ seed มีโต๊ะเปิดค้างไว้เป็นตัวอย่าง (โต๊ะ 2, 4)
+// และเทสอื่นก็เปิดโต๊ะทิ้งไว้ได้ — จึงนับ "ก่อน/หลัง" เทียบกันแทนการ hardcode จำนวน
+// และเปิดโต๊ะว่างตัวแรก (ไม่ fix โต๊ะ 1) เปิดจริงผ่าน UI จึงปิดคืนท้ายเทส
 
 test('cashier เปิดโต๊ะที่ 1 แล้วจำนวนโต๊ะว่างและรายการโต๊ะที่เปิดต้องถูกต้อง', async ({
   page,
@@ -14,24 +15,28 @@ test('cashier เปิดโต๊ะที่ 1 แล้วจำนวนโ
   await page.goto('/employee/check')
   await expect(page).toHaveURL(/\/employee\/check$/)
 
-  // 2. ตอนยังไม่เปิดโต๊ะไหนเลย ต้องเห็นโต๊ะว่างครบ 6 และข้อความ "ยังไม่มีโต๊ะที่เปิดอยู่"
-  await expect(page.getByText('จำนวนโต๊ะที่ว่าง 6 โต๊ะ')).toBeVisible()
-  await expect(page.getByText('ยังไม่มีโต๊ะที่เปิดอยู่')).toBeVisible()
+  // 2. จำจำนวนโต๊ะว่างตอนเริ่มไว้เทียบ
+  const availableText = page.getByText(/จำนวนโต๊ะที่ว่าง \d+ โต๊ะ/)
+  await expect(availableText).toBeVisible()
+  const before = Number((await availableText.innerText()).match(/\d+/)![0])
 
   // 3. กดปุ่ม โต๊ะ / QR
   await page.getByRole('link', { name: 'โต๊ะ / QR' }).click()
   await expect(page).toHaveURL(/\/employee\/tables$/)
 
-  // 4. กดปุ่ม เปิดโต๊ะ + สร้าง QR ของโต๊ะที่ 1 (เปิดสำเร็จจะเด้ง QR modal ขึ้นมาเอง)
+  // 4. กดปุ่ม เปิดโต๊ะ + สร้าง QR ของโต๊ะว่างตัวแรก (เปิดสำเร็จจะเด้ง QR modal ขึ้นมาเอง)
+  const firstAvailable = page.locator('article', { hasText: 'ว่าง' }).first()
+  const tableCardText = (await firstAvailable.locator('p.text-xl').innerText()).trim()
+  const tableName = tableCardText.replace(/^โต๊ะ\s*/, '')
   const table1Card = page
     .locator('article')
-    .filter({ has: page.getByText('โต๊ะ 1', { exact: true }) })
+    .filter({ has: page.getByText(tableCardText, { exact: true }) })
 
   // ก่อนเปิดโต๊ะ badge สถานะต้องขึ้นว่า "ว่าง"
   await expect(table1Card.getByText('ว่าง', { exact: true })).toBeVisible()
 
   await table1Card.getByRole('button', { name: 'เปิดโต๊ะ + สร้าง QR' }).click()
-  await expect(page.getByRole('dialog', { name: 'QR โต๊ะ 1' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: `QR โต๊ะ ${tableName}` })).toBeVisible()
 
   // เปิดโต๊ะสำเร็จแล้ว badge สถานะต้องเปลี่ยนเป็น "มีลูกค้า"
   await expect(table1Card.getByText('มีลูกค้า', { exact: true })).toBeVisible()
@@ -42,18 +47,18 @@ test('cashier เปิดโต๊ะที่ 1 แล้วจำนวนโ
   await checkTab.click({ force: true })
   await checkTab.click()
 
-  // 6. ตรวจสอบว่าจำนวนโต๊ะว่างลดลงถูกต้อง และโต๊ะที่เปิดไปแล้วคือโต๊ะที่ 1
+  // 6. ตรวจสอบว่าจำนวนโต๊ะว่างลดลง 1 และโต๊ะที่เพิ่งเปิดอยู่ในตารางโต๊ะที่เปิด
   await expect(page).toHaveURL(/\/employee\/check$/)
-  await expect(page.getByText('จำนวนโต๊ะที่ว่าง 5 โต๊ะ')).toBeVisible()
+  await expect(page.getByText(`จำนวนโต๊ะที่ว่าง ${before - 1} โต๊ะ`)).toBeVisible()
 
   // scope เฉพาะตารางโต๊ะที่เปิดอยู่ (ตัวแรก) ไม่เอาตาราง "บิลที่เก็บแล้ววันนี้" ด้านล่าง
   const rows = page.locator('table').first().locator('tbody tr')
-  await expect(rows).toHaveCount(1)
-  await expect(rows.first().getByRole('cell', { name: '1', exact: true })).toBeVisible()
+  await expect(rows.filter({ has: page.getByRole('cell', { name: tableName, exact: true }) })).toHaveCount(1)
 
-  // เก็บกวาด: ปิดโต๊ะ 1 คืน ให้กลับไปว่างครบ 6 เหมือนเดิม ไม่งั้นรันเทสซ้ำครั้งต่อไปจะพังตั้งแต่ข้อ 2
+  // เก็บกวาด: ปิดโต๊ะคืน (มี popup ยืนยัน) ให้จำนวนโต๊ะว่างกลับเท่าเดิม
   await page.goto('/employee/tables')
   await table1Card.getByRole('button', { name: 'ปิดโต๊ะ' }).click()
+  await page.getByRole('dialog', { name: 'ปิดโต๊ะ' }).getByRole('button', { name: 'ปิดโต๊ะ' }).click()
   await expect(
     table1Card.getByRole('button', { name: 'เปิดโต๊ะ + สร้าง QR' }),
   ).toBeVisible()

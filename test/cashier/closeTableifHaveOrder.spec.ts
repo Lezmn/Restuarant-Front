@@ -39,10 +39,14 @@ test('ปิดโต๊ะที่มีลูกค้าสั่งอา�
   ).toBeVisible()
 
   // ลองปิดโต๊ะทั้งที่ลูกค้าเพิ่งสั่งไปและออเดอร์ยังไม่ถูกเสิร์ฟ/จ่าย
+  // ปิดโต๊ะมี popup ยืนยันก่อน (ConfirmDialog) — error จาก backend ขึ้นในกล่องนั้น
   const openedTable = page.locator('article', { hasText: tableCardText })
   await openedTable.getByRole('button', { name: 'ปิดโต๊ะ' }).click()
+  const confirmClose = page.getByRole('dialog', { name: 'ปิดโต๊ะ' })
+  await confirmClose.getByRole('button', { name: 'ปิดโต๊ะ' }).click()
 
-  await expect(page.getByRole('alert')).toHaveText('ยังมีออเดอร์ที่ไม่ปิดใน session นี้')
+  await expect(confirmClose.getByRole('alert')).toHaveText('ยังมีออเดอร์ที่ไม่ปิดใน session นี้')
+  await confirmClose.getByRole('button', { name: 'ย้อนกลับ' }).click()
   // โต๊ะต้องยังอยู่ในสถานะเปิด (มีปุ่ม "ปิดโต๊ะ") ไม่ใช่กลับไปเป็น "เปิดโต๊ะ + สร้าง QR"
   await expect(openedTable.getByRole('button', { name: 'ปิดโต๊ะ' })).toBeVisible()
 })
@@ -57,17 +61,21 @@ test('ยกเลิกออเดอร์แล้วปิดโต๊ะ�
   // ยกเลิกออเดอร์จากหน้า Order (คิวครัว) ก่อน — ต้องเป็น ADMIN/KITCHEN เท่านั้นถึงเข้าได้
   // หา <article> ด้วย orderRef เจาะจง กันชนกับออเดอร์เก่าที่อาจค้างอยู่ในโต๊ะเดียวกันจากไฟล์เทสอื่น
   await page.getByRole('link', { name: 'Order' }).click()
-  page.once('dialog', (dialog) => dialog.accept()) // ยืนยัน confirm() ของปุ่ม "ยกเลิกออเดอร์"
   await page
     .locator('article', { hasText: `#${orderRef}` })
     .getByRole('button', { name: 'ยกเลิกออเดอร์' })
     .click()
+  // ยืนยันใน popup (ConfirmDialog) แทน confirm() ของเบราว์เซอร์
+  const confirmCancel = page.getByRole('dialog', { name: 'ยกเลิกออเดอร์' })
+  await confirmCancel.getByRole('button', { name: 'ยกเลิกออเดอร์' }).click()
+  await expect(confirmCancel).not.toBeVisible()
 
   await page.getByRole('link', { name: 'โต๊ะ / QR' }).click()
   await page
     .locator('article', { hasText: tableCardText })
     .getByRole('button', { name: 'ปิดโต๊ะ' })
     .click()
+  await page.getByRole('dialog', { name: 'ปิดโต๊ะ' }).getByRole('button', { name: 'ปิดโต๊ะ' }).click()
 
   // ไม่มีออเดอร์ค้างแล้ว (CANCELLED ไม่นับ) ปิดโต๊ะสำเร็จ โต๊ะกลับมาโชว์ปุ่มเปิดโต๊ะใหม่
   await expect(

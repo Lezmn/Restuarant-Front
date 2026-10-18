@@ -60,9 +60,13 @@ test('STAFF เข้าหน้า users (ADMIN เท่านั้น) ไ�
   await expect(page).toHaveURL(/\/employee\/check$/)
 })
 
-test('STAFF เข้าหน้า owner ไม่ได้ ต้องถูกเด้งไป /owner/login', async ({ page, request }) => {
+// หน้าเจ้าของร้าน: ProtectedRoute ใช้ fallbackPath="/employee" (ไม่มี /owner/login แยกแล้ว)
+test('STAFF เข้าหน้า owner ไม่ได้ ต้องถูกเด้งกลับหน้าแรกของ STAFF (/employee/check)', async ({
+  page,
+  request,
+}) => {
   await loginAsStaff(page, request)
   await page.goto('/owner/dashboard')
 
-  await expect(page).toHaveURL(/\/owner\/login$/)
+  await expect(page).toHaveURL(/\/employee\/check$/)
 })

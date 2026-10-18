@@ -51,23 +51,24 @@ export async function setAuthState(
 /** login เป็น admin จริงผ่าน API แล้วยัด token ลง localStorage — ใช้ setup ก่อนทุกเทสที่ต้อง login เป็น admin */
 export async function loginAsAdmin(page: Page, request: APIRequestContext) {
   const { accessToken, user } = await loginViaApi(request, 'admin', 'ChangeMe123!')
-  await page.goto('/employee/login')
+  await page.goto('/login')
   await setAuthState(page, accessToken, user)
   return user
 }
 
 /** login เป็น STAFF จริง — ใช้เทียบว่าหน้าที่ ADMIN เท่านั้นเข้าได้ จะกัน STAFF ออกจริง */
+// 23 ก.ย. รวม CASHIER + WAITER เป็น STAFF แล้ว — seed เหลือบัญชี staff@ บัญชีเดียว
 export async function loginAsStaff(page: Page, request: APIRequestContext) {
-  const { accessToken, user } = await loginViaApi(request, 'waiter', 'ChangeMe123!')
-  await page.goto('/employee/login')
+  const { accessToken, user } = await loginViaApi(request, 'staff', 'ChangeMe123!')
+  await page.goto('/login')
   await setAuthState(page, accessToken, user)
   return user
 }
 
 /** login เป็น cashier (STAFF) จริง — ใช้ทดสอบฝั่ง Check / เปิดโต๊ะ */
 export async function loginAsCashier(page: Page, request: APIRequestContext) {
-  const { accessToken, user } = await loginViaApi(request, 'cashier', 'ChangeMe123!')
-  await page.goto('/employee/login')
+  const { accessToken, user } = await loginViaApi(request, 'staff', 'ChangeMe123!')
+  await page.goto('/login')
   await setAuthState(page, accessToken, user)
   return user
 }
@@ -75,7 +76,7 @@ export async function loginAsCashier(page: Page, request: APIRequestContext) {
 /** login เป็น KITCHEN จริง — ใช้ทดสอบหน้า Order (คิวครัว) */
 export async function loginAsKitchen(page: Page, request: APIRequestContext) {
   const { accessToken, user } = await loginViaApi(request, 'kitchen', 'ChangeMe123!')
-  await page.goto('/employee/login')
+  await page.goto('/login')
   await setAuthState(page, accessToken, user)
   return user
 }
@@ -104,13 +105,19 @@ export async function openTableAndPlaceOrder(
   const openedTable = page.locator('article', { hasText: tableCardText })
   await openedTable.getByRole('button', { name: 'รับออเดอร์แทนลูกค้า' }).click()
 
+  // TakeOrderDialog: กด "+ เพิ่ม" ที่เมนู → ได้บรรทัดใหม่ด้านล่าง (เลือกตัวเลือก/จำนวน/หมายเหตุรายบรรทัด)
   const orderDialog = page.getByRole('dialog')
   await orderDialog
     .getByRole('listitem')
     .filter({ hasText: menuItemPattern })
     .first()
-    .getByRole('button', { name: 'เพิ่มจำนวน' })
+    .getByRole('button', { name: '+ เพิ่ม' })
     .click()
+
+  // เมนูที่มีกลุ่ม "เนื้อสัตว์" บังคับเลือก (ปุ่มส่งเข้าครัวจะกดไม่ได้ถ้ายังไม่เลือก)
+  // เลือก "หมู" (+0 บาท) ไว้ ราคาจะได้เท่าราคาเมนูพอดี
+  const pork = orderDialog.getByRole('button', { name: 'หมู', exact: true })
+  if (await pork.count()) await pork.last().click()
 
   const [response] = await Promise.all([
     page.waitForResponse(
