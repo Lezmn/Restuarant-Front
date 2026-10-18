@@ -29,6 +29,30 @@ export async function addExpense(vars: ExpenseInput): Promise<ApiExpense> {
   })
 }
 
+export interface DrawerExpenseInput {
+  detail: string
+  amount: number
+  category?: ExpenseCategory
+}
+
+/**
+ * POST /expenses/drawer @Roles(ADMIN, STAFF) — แคชเชียร์หยิบเงินสดจากลิ้นชักไปจ่าย
+ * backend ใส่เวลาปัจจุบัน + ผู้บันทึกให้เอง แก้/ลบได้เฉพาะ ADMIN ที่หน้ารายรับ-รายจ่าย
+ */
+export async function addDrawerExpense(vars: DrawerExpenseInput): Promise<ApiExpense> {
+  if (!vars.detail.trim()) throw new Error('กรุณากรอกว่าเอาไปจ่ายอะไร')
+  if (!(vars.amount > 0)) throw new Error('จำนวนเงินต้องมากกว่า 0')
+
+  return apiClient<ApiExpense>('/expenses/drawer', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: vars.detail.trim(),
+      amount: vars.amount,
+      category: vars.category,
+    }),
+  })
+}
+
 /** PATCH /expenses/:id @Roles(ADMIN) */
 export async function updateExpense(vars: {
   id: Id

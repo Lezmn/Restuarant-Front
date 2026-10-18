@@ -7,7 +7,8 @@ import { submitLogin } from '../helpers'
 
 const accounts = [
   { username: 'admin', name: 'Admin', role: 'ADMIN', landingUrl: /\/employee\/order$/ },
-  { username: 'cashier', name: 'Cashier', role: 'STAFF', landingUrl: /\/employee\/check$/ },
+  // 23 ก.ย. รวม CASHIER + WAITER เป็น STAFF — seed เหลือบัญชี staff (ชื่อ "Staff")
+  { username: 'staff', name: 'Staff', role: 'STAFF', landingUrl: /\/employee\/check$/ },
   { username: 'kitchen', name: 'Kitchen Staff', role: 'KITCHEN', landingUrl: /\/employee\/order$/ },
 ]
 
@@ -15,7 +16,7 @@ for (const account of accounts) {
   test(`login ด้วย ${account.username} แล้ว header ต้องโชว์ role ${account.role} ถูกต้อง`, async ({
     page,
   }) => {
-    await page.goto('/employee/login')
+    await page.goto('/login')
     await submitLogin(page, account.username, 'ChangeMe123!')
 
     await expect(page).toHaveURL(account.landingUrl) // ตรวจสอบว่า login แล้วไปหน้า landing page ถูกต้อง

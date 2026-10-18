@@ -76,7 +76,7 @@ export function RequestsPage() {
                   type="button"
                   disabled={resolve.isPending}
                   onClick={() => resolve.mutate(req.id)}
-                  className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  className="min-h-10 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
                 >
                   ทำเสร็จแล้ว
                 </button>

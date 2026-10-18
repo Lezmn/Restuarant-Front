@@ -5,6 +5,7 @@ import { useDashboard } from '@/features/reports/hooks'
 import { formatBaht } from '@/lib/format'
 import { usePagination } from '@/lib/use-pagination'
 import { PaymentMethod } from '@/types/enums'
+import { Link } from 'react-router-dom'
 
 const methodLabel: Record<PaymentMethod, string> = {
   [PaymentMethod.CASH]: 'จ่ายเงินสด',
@@ -42,10 +43,24 @@ export function DashboardPage() {
     )
   }
 
-  const { summary, trend, todayStatus, notifications } = data
+  const { summary, trend, todayStatus, notifications, slipIssues } = data
+  const slipIssueCount = slipIssues.pending + slipIssues.failed
 
   return (
     <div className="space-y-5">
+      {/* สลิป PromptPay ที่ยังยืนยันเงินเข้าไม่ได้ — ค้างจนกว่าจะจัดการ ไม่ใช่แค่ของวันนี้ */}
+      {slipIssueCount > 0 && (
+        <Link
+          to="/employee/check"
+          className="flex min-h-12 items-center justify-between gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3 text-sm transition hover:bg-amber-100"
+        >
+          <span className="font-semibold text-amber-900">
+            ⚠️ สลิป PromptPay ที่ต้องตาม: รอตรวจ {slipIssues.pending} · ไม่ผ่าน {slipIssues.failed}
+          </span>
+          <span className="shrink-0 font-bold text-brand-400">ไปหน้า Check →</span>
+        </Link>
+      )}
+
       <div className="flex justify-end">
         <p className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800">
           📅 {thaiDate(summary.date)}

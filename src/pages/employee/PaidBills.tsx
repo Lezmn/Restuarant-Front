@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Pagination } from '@/components/ui/Pagination'
 import {
   usePayment,
-  usePayments,
+  useTodayPayments,
   useVoidPayment,
 } from '@/features/payments/hooks'
 import { formatBaht, formatTime } from '@/lib/format'
@@ -11,6 +11,7 @@ import { usePagination } from '@/lib/use-pagination'
 import { PaymentMethod, PaymentStatus } from '@/types/enums'
 import type { Id, Payment } from '@/types/models'
 import { ReceiptDialog } from './ReceiptDialog'
+import { SlipBadge } from './SlipBadge'
 import { useState } from 'react'
 
 const methodLabel: Record<string, string> = {
@@ -32,7 +33,7 @@ const isToday = (iso: string) =>
  * ยกเลิกแล้ว backend จะคืนออเดอร์เป็นเสิร์ฟแล้วและเปิดโต๊ะกลับ → โต๊ะจะกลับมาโผล่ในตารางด้านบน
  */
 export function PaidBills() {
-  const { data: payments, isPending } = usePayments()
+  const { data: payments, isPending } = useTodayPayments()
   const voidPayment = useVoidPayment()
 
   const [viewId, setViewId] = useState<Id | null>(null)
@@ -41,6 +42,7 @@ export function PaidBills() {
   // GET /payments ไม่ส่ง items มา ต้องดึงทีละใบตอนจะเปิดใบเสร็จ
   const { data: viewing } = usePayment(viewId ?? undefined)
 
+  // backend กรองให้แล้ว กรองซ้ำกันไว้เผื่อเปิดจอค้างข้ามเที่ยงคืน
   const today = (payments ?? []).filter((p) => isToday(p.paidAt))
   // วันที่ขายดีจะมีหลายสิบบิล ตัดเป็นหน้า ๆ ไม่งั้นตารางยาวจนหาโต๊ะด้านบนไม่เจอ
   const paged = usePagination(today)
@@ -114,6 +116,12 @@ export function PaidBills() {
                     }`}
                   >
                     {methodLabel[p.method]}
+                    {/* PromptPay: ผลตรวจสลิป (บิลเก่าก่อนมีระบบตรวจไม่มีป้าย) */}
+                    {p.slip && !voided && (
+                      <span className="mt-1 block">
+                        <SlipBadge slip={p.slip} />
+                      </span>
+                    )}
                   </td>
                   <td
                     className={`px-4 py-3 font-bold tabular-nums ${
@@ -136,18 +144,19 @@ export function PaidBills() {
                         )}
                       </span>
                     ) : (
-                      <div className="flex items-center justify-center gap-4">
+                      // ปุ่มหน้าตาเหมือนลิงก์ แต่พื้นที่กดสูง 40px — บน iPad ข้อความ 20px นิ้วกดพลาดไปโดนอีกปุ่มง่าย
+                      <div className="flex items-center justify-center gap-1">
                         <button
                           type="button"
                           onClick={() => setViewId(p.id)}
-                          className="text-sm font-semibold text-brand-400 underline-offset-4 transition hover:underline"
+                          className="min-h-10 rounded-lg px-3 text-sm font-semibold text-brand-400 underline-offset-4 transition hover:bg-brand-50 hover:underline"
                         >
                           ใบเสร็จ
                         </button>
                         <button
                           type="button"
                           onClick={() => setVoidTarget(p)}
-                          className="text-sm font-semibold text-danger underline-offset-4 transition hover:underline"
+                          className="min-h-10 rounded-lg px-3 text-sm font-semibold text-danger underline-offset-4 transition hover:bg-danger/5 hover:underline"
                         >
                           ยกเลิกบิล
                         </button>
@@ -179,7 +188,11 @@ export function PaidBills() {
         <VoidDialog
           payment={voidTarget}
           isSaving={voidPayment.isPending}
-          onCancel={() => setVoidTarget(null)}
+          error={voidPayment.error}
+          onCancel={() => {
+            voidPayment.reset()
+            setVoidTarget(null)
+          }}
           onConfirm={(reason) =>
             voidPayment.mutate(
               { id: voidTarget.id, reason },
@@ -195,11 +208,14 @@ export function PaidBills() {
 function VoidDialog({
   payment,
   isSaving,
+  error,
   onCancel,
   onConfirm,
 }: {
   payment: Payment
   isSaving: boolean
+  /** error ต้องโชว์ในกล่องนี้ — ErrorNote ของหน้าอยู่หลัง modal มองไม่เห็น */
+  error: unknown
   onCancel: () => void
   onConfirm: (reason: string) => void
 }) {
@@ -207,6 +223,7 @@ function VoidDialog({
 
   return (
     <Modal title="ยกเลิกบิล" onClose={onCancel}>
+      <ErrorNote error={error} />
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -229,9 +246,13 @@ function VoidDialog({
         </p>
 
         <label className="mt-4 block">
-          <span className="text-sm font-semibold text-gray-700">เหตุผล</span>
+          <span className="text-sm font-semibold text-gray-700">
+            เหตุผล<span className="ml-1 text-danger">*</span>
+          </span>
           <textarea
             value={reason}
+            required
+            maxLength={200}
             onChange={(e) => setReason(e.target.value)}
             rows={2}
             placeholder="เช่น กดจ่ายผิดโต๊ะ / ลูกค้าเปลี่ยนวิธีจ่าย"
@@ -249,7 +270,8 @@ function VoidDialog({
           </button>
           <button
             type="submit"
-            disabled={isSaving}
+            // ต้องมีเหตุผลทุกครั้ง — backend ก็บังคับไว้ (เจ้าของต้องไล่ดูย้อนหลังได้)
+            disabled={isSaving || !reason.trim()}
             className="rounded bg-danger py-2.5 font-bold text-white transition hover:brightness-95 disabled:opacity-60"
           >
             {isSaving ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกบิล'}

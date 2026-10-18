@@ -21,7 +21,7 @@ test('cashier เปิดโต๊ะ ลูกค้าสั่งอาห�
   const availableTable = page.locator('article', { hasText: 'ว่าง' }).first()
   await expect(availableTable).toBeVisible()
   // จำชื่อโต๊ะไว้ ใช้หาแถวที่ถูกต้องในหน้า Check ทีหลัง เพราะโต๊ะอื่นที่เปิดค้างจากรันเทสรอบก่อน ๆ
-  // ก็มีข้อความ "รออีก N ออเดอร์" เหมือนกัน ถ้าไม่ระบุเจาะจงโต๊ะ จะชนกันกลายเป็น strict mode violation
+  // ก็มีข้อความ "ยังเสิร์ฟไม่ครบ (เหลือ N ออเดอร์)" เหมือนกัน ถ้าไม่ระบุเจาะจงโต๊ะ จะชนกันกลายเป็น strict mode violation
   // การ์ดโต๊ะโชว์ "โต๊ะ {name}" แต่ตาราง Check โชว์แค่ {session.tableName} เฉย ๆ เลยต้องตัดคำว่า "โต๊ะ" ออกก่อน
   const tableCardText = (await availableTable.locator('p.text-xl').innerText()).trim()
   const tableName = tableCardText.replace(/^โต๊ะ\s*/, '')
@@ -57,8 +57,8 @@ test('cashier เปิดโต๊ะ ลูกค้าสั่งอาห�
   // กลับมาฝั่งพนักงาน ไปหน้า Check ต้องเห็นโต๊ะนี้ค้างจ่ายอยู่
   await page.getByRole('link', { name: 'Check' }).click()
 
-  // ข้าวผัด (50 บาท) + หมู (+0 บาท) = ยังไม่เสิร์ฟ เลยเก็บเงินไม่ได้ ต้องขึ้น "รออีก 1 ออเดอร์" แทนปุ่ม "เก็บเงิน"
+  // ข้าวผัด (50 บาท) + หมู (+0 บาท) = ยังไม่เสิร์ฟ เลยเก็บเงินไม่ได้ ต้องขึ้น "ยังเสิร์ฟไม่ครบ (เหลือ 1 ออเดอร์)" แทนปุ่ม "เก็บเงิน"
   // ระบุแถวด้วยชื่อโต๊ะที่จำไว้ กันชนกับโต๊ะอื่นที่อาจมีออเดอร์ค้างจากการรันเทสรอบก่อน ๆ
-  const row = page.getByRole('row').filter({ hasText: tableName })
-  await expect(row.getByText(/รออีก \d+ ออเดอร์/)).toBeVisible()
+  const row = page.getByRole('row').filter({ has: page.getByRole('cell', { name: tableName, exact: true }) })
+  await expect(row.getByText(/ยังเสิร์ฟไม่ครบ \(เหลือ \d+ ออเดอร์\)/)).toBeVisible()
 })

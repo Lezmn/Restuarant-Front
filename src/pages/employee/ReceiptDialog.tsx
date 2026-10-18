@@ -1,7 +1,7 @@
 import { Modal } from '@/components/ui/Modal'
 import { formatBaht } from '@/lib/format'
 import { RESTAURANT_NAME } from '@/lib/config'
-import { PaymentMethod } from '@/types/enums'
+import { PaymentMethod, SlipStatus } from '@/types/enums'
 import type { Payment } from '@/types/models'
 
 const methodLabel: Record<string, string> = {
@@ -37,6 +37,13 @@ export function ReceiptDialog({
 
   return (
     <Modal title="ใบเสร็จรับเงิน" onClose={onClose}>
+      {/* แจ้งแคชเชียร์เท่านั้น ไม่ติดไปกับกระดาษ */}
+      {payment.slip?.status === SlipStatus.PENDING && (
+        <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 print:hidden">
+          ⏳ ยังตรวจสลิปไม่ได้ ({payment.slip.message}) — บันทึกบิลไว้แล้ว ระบบจะตรวจซ้ำเอง
+          ถ้าไม่ผ่านจะขึ้นในหน้า Check และ Dashboard
+        </p>
+      )}
       <div className="print-area print-receipt w-full">
         <div className="text-center">
           <p className="text-lg font-bold text-black">{RESTAURANT_NAME}</p>

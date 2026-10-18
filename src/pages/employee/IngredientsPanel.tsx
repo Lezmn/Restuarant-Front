@@ -130,7 +130,14 @@ export function IngredientsPanel() {
       </div>
 
       {deleting && (
-        <Modal title="ลบวัตถุดิบ" onClose={() => setDeleting(null)}>
+        <Modal
+          title="ลบวัตถุดิบ"
+          onClose={() => {
+            remove.reset()
+            setDeleting(null)
+          }}
+        >
+          <ErrorNote error={remove.error} />
           <p className="text-sm text-gray-700">
             ลบวัตถุดิบ{' '}
             <b className="text-black">{deleting.name}</b> ?
@@ -190,15 +197,20 @@ function Switch({
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-60 ${
-        checked ? 'bg-brand-400' : 'bg-gray-300'
-      }`}
+      // ปุ่มจริงใหญ่ 40×56 (พื้นที่กดบน iPad) ตัวสวิตช์ที่เห็นอยู่ข้างใน
+      className="flex h-10 w-14 shrink-0 items-center justify-center disabled:opacity-60"
     >
       <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
-          checked ? 'left-[22px]' : 'left-0.5'
+        className={`relative block h-7 w-12 rounded-full transition ${
+          checked ? 'bg-brand-400' : 'bg-gray-300'
         }`}
-      />
+      >
+        <span
+          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
+            checked ? 'left-[22px]' : 'left-0.5'
+          }`}
+        />
+      </span>
     </button>
   )
 }

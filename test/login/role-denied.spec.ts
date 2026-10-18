@@ -2,31 +2,30 @@ import { test, expect } from '@playwright/test'
 import { submitLogin } from '../helpers'
 
 // ⚠️ ต้องรัน backend จริง + seed data ที่ localhost:3000
-// เคสนี้: login ถูกต้องทุกอย่าง แต่ role ไม่มีสิทธิ์เข้าหน้านั้น (allowedRoles ไม่ตรง)
+// เดิมเทสหน้า /owner/login ที่จำกัดเฉพาะ ADMIN — ตอนนี้ login รวมหน้าเดียว (ทุก role login ได้)
+// สิทธิ์จึงไปกันที่หน้าปลายทางแทน: หน้าเจ้าของร้าน (/owner/*) เข้าได้เฉพาะ ADMIN
+// role อื่นจะถูก ProtectedRoute เด้งกลับ /employee → ต่อไปหน้าแรกของ role ตัวเอง
 
-test('login ด้วยบัญชี waiter (STAFF) ที่หน้า owner login ต้องถูกปฏิเสธ', async ({
+test('login ด้วยบัญชี staff (STAFF) แล้วเข้าหน้าเจ้าของร้าน ต้องถูกเด้งกลับหน้าแรกของ STAFF', async ({
   page,
 }) => {
-  await page.goto('/owner/login')
+  await page.goto('/login')
+  await submitLogin(page, 'staff', 'ChangeMe123!')
+  await expect(page).toHaveURL(/\/employee\/check$/)
 
-  await submitLogin(page, 'waiter', 'ChangeMe123!')
+  await page.goto('/owner/dashboard')
 
-  // owner login อนุญาตแค่ ADMIN — STAFF ต้องโดน signOut ทันทีและเห็นข้อความนี้
-  await expect(page.getByText('บัญชีนี้ไม่มีสิทธิ์เข้าหน้านี้')).toBeVisible()
-  await expect(page).toHaveURL(/\/owner\/login$/)
-
-  // ต้องถูก signOut จริง ไม่ใช่แค่ไม่ redirect (เช็คว่า token ไม่ค้างใน localStorage)
-  const token = await page.evaluate(() => localStorage.getItem('restaurant.token'))
-  expect(token).toBeNull()
+  await expect(page).toHaveURL(/\/employee\/check$/)
 })
 
-test('login ด้วยบัญชี kitchen (KITCHEN) ที่หน้า owner login ต้องถูกปฏิเสธเช่นกัน', async ({
+test('login ด้วยบัญชี kitchen (KITCHEN) แล้วเข้าหน้าเจ้าของร้าน ต้องถูกเด้งกลับหน้าแรกของ KITCHEN', async ({
   page,
 }) => {
-  await page.goto('/owner/login')
-
+  await page.goto('/login')
   await submitLogin(page, 'kitchen', 'ChangeMe123!')
+  await expect(page).toHaveURL(/\/employee\/order$/)
 
-  await expect(page.getByText('บัญชีนี้ไม่มีสิทธิ์เข้าหน้านี้')).toBeVisible()
-  await expect(page).toHaveURL(/\/owner\/login$/)
+  await page.goto('/owner/finance')
+
+  await expect(page).toHaveURL(/\/employee\/order$/)
 })

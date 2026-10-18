@@ -42,6 +42,8 @@ export interface NewOrderLine {
   menuItemId: Id
   quantity: number
   note: string
+  /** ตัวเลือกที่เลือก (เนื้อสัตว์/เพิ่มเติม) — backend คิดราคาตัวเลือกให้เอง */
+  optionIds?: Id[]
 }
 
 /**
@@ -63,6 +65,7 @@ export async function createOrder(vars: {
         menuItemId: l.menuItemId,
         quantity: l.quantity,
         ...(l.note.trim() ? { note: l.note.trim() } : {}),
+        ...(l.optionIds?.length ? { optionIds: l.optionIds } : {}),
       })),
     }),
   })

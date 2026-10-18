@@ -1,6 +1,8 @@
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorNote } from '@/components/ui/ErrorNote'
 import { Modal } from '@/components/ui/Modal'
 import { useOrders } from '@/features/orders/hooks'
+import { useAuth } from '@/features/auth/use-auth'
 import { useCreatePayment } from '@/features/payments/hooks'
 import { useServiceRequests } from '@/features/service-requests/hooks'
 import { useCloseSession, useSessions } from '@/features/table-sessions/hooks'
@@ -11,13 +13,22 @@ import { buildPromptPayPayload } from '@/lib/promptpay'
 import {
   OrderStatus,
   PaymentMethod,
+  Role,
   ServiceRequestStatus,
   ServiceRequestType,
   TableSessionStatus,
 } from '@/types/enums'
-import type { Id, Payment } from '@/types/models'
+import type { Id, Payment, TableSession } from '@/types/models'
+import { CashDrawerBar } from './CashDrawerBar'
 import { PaidBills } from './PaidBills'
 import { ReceiptDialog } from './ReceiptDialog'
+import { SlipIssues } from './SlipIssues'
+import {
+  emptySlipInput,
+  isSlipReady,
+  SlipScanField,
+  type SlipInput,
+} from './SlipScanField'
 import { QRCodeSVG } from 'qrcode.react'
 import { useMemo, useState } from 'react'
 
@@ -61,12 +72,16 @@ export function CheckPage() {
   })
   const { data: orders } = useOrders({ refetchInterval: POLL_MS })
   const createPayment = useCreatePayment()
+  const isAdmin = useAuth((s) => s.user?.role === Role.ADMIN)
   const closeSession = useCloseSession()
   const [target, setTarget] = useState<PayTarget | null>(null)
   /** ใบเสร็จที่เพิ่งออก — เปิดให้พิมพ์ทันทีหลังรับเงิน */
   const [receipt, setReceipt] = useState<Payment | null>(null)
-  /** หมายเหตุที่พนักงานพิมพ์ตอนรับเงิน — backend ยังไม่มี field นี้ จึงติดไปกับใบเสร็จที่พิมพ์เท่านั้น */
-  const [receiptNote, setReceiptNote] = useState('')
+  /** โต๊ะที่กำลังจะปิด — ยืนยันใน popup แบบเดียวกับหน้าอื่น (เดิมใช้ confirm() ของเบราว์เซอร์) */
+  const [closing, setClosing] = useState<{
+    session: TableSession
+    neverOrdered: boolean
+  } | null>(null)
 
   const openSessions = (sessions ?? []).filter(
     (s) => s.status === TableSessionStatus.OPEN,
@@ -119,7 +134,9 @@ export function CheckPage() {
 
   return (
     <div>
-      <ErrorNote error={createPayment.error ?? closeSession.error} />
+      <CashDrawerBar />
+
+      <ErrorNote error={createPayment.error} />
 
       {isPending && <p className="text-sm text-gray-500">กำลังโหลด...</p>}
 
@@ -160,7 +177,11 @@ export function CheckPage() {
                 checkout,
               }) => {
                 // ถ้าลูกค้ายังไม่ได้กดเช็คบิล พนักงานก็เปิดบิลเองได้ ตั้งต้นเป็นเงินสด
-                const method = checkout?.paymentMethod ?? PaymentMethod.CASH
+                // คำขอเก่าอาจเป็น CARD ที่ร้านเลิกรับแล้ว (backend ไม่รับ) — ถือว่ายังไม่ได้เลือก
+                const customerMethod = payMethods.find(
+                  (m) => m === checkout?.paymentMethod,
+                )
+                const method = customerMethod ?? PaymentMethod.CASH
                 // ไม่มีอะไรให้เก็บเงินแล้ว (ยกเลิกหมด/เปิดโต๊ะทิ้งไว้) — ต้องปิดโต๊ะได้
                 // ไม่งั้นโต๊ะค้าง OCCUPIED ตลอดไป เปิด QR ใหม่ก็ไม่ได้
                 const nothingToCharge = unpaid.length === 0
@@ -182,11 +203,11 @@ export function CheckPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {checkout?.paymentMethod ? (
+                      {customerMethod ? (
                         <span
-                          className={`font-semibold ${methodColor[checkout.paymentMethod]}`}
+                          className={`font-semibold ${methodColor[customerMethod]}`}
                         >
-                          {methodLabel[checkout.paymentMethod]}
+                          {methodLabel[customerMethod]}
                         </span>
                       ) : (
                         <span className="text-gray-500">ลูกค้ายังไม่ได้เลือก</span>
@@ -197,17 +218,9 @@ export function CheckPage() {
                         <button
                           type="button"
                           disabled={closeSession.isPending}
-                          onClick={() => {
-                            if (
-                              confirm(
-                                `ปิดโต๊ะ ${session.tableName} ? (ไม่มียอดค้างชำระแล้ว)`,
-                              )
-                            ) {
-                              closeSession.mutate(session.id)
-                            }
-                          }}
+                          onClick={() => setClosing({ session, neverOrdered })}
                           title="ไม่มียอดต้องเก็บ — ปิดโต๊ะเพื่อคืนโต๊ะให้ว่าง"
-                          className="cursor-pointer rounded font-semibold text-gray-600 underline-offset-4 transition hover:text-brand-400 hover:underline disabled:opacity-60"
+                          className="min-h-10 cursor-pointer rounded-lg px-3 font-semibold text-gray-600 underline-offset-4 transition hover:text-brand-400 hover:underline disabled:opacity-60"
                         >
                           <span className="block text-xs font-normal text-gray-500">
                             {neverOrdered
@@ -232,13 +245,11 @@ export function CheckPage() {
                               tableName: session.tableName,
                               method,
                               amountDue: outstanding,
-                              chosenByCustomer: Boolean(
-                                checkout?.paymentMethod,
-                              ),
+                              chosenByCustomer: Boolean(customerMethod),
                             })
                           }
                           title="บันทึกการชำระเงิน"
-                          className={`inline-flex cursor-pointer items-center gap-1.5 rounded font-semibold underline-offset-4 transition hover:underline focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:outline-none ${
+                          className={`inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-lg px-3 font-semibold underline-offset-4 transition hover:underline focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:outline-none ${
                             methodColor[method]
                           } ${methodHover[method]}`}
                         >
@@ -268,7 +279,37 @@ export function CheckPage() {
         </table>
       </div>
 
+      {/* บิล PromptPay ที่ยังยืนยันเงินเข้าไม่ได้ (ทุกวัน) — ซ่อนเองถ้าไม่มี */}
+      <SlipIssues />
+
       <PaidBills />
+
+      {closing && (
+        <ConfirmDialog
+          title="ปิดโต๊ะ"
+          subject={`โต๊ะ ${closing.session.tableName}`}
+          detail={
+            closing.neverOrdered
+              ? 'ยังไม่ได้สั่งอาหาร'
+              : 'เก็บเงินครบแล้ว ไม่มียอดค้างชำระ'
+          }
+          consequence="QR ของโต๊ะนี้จะใช้สั่งอาหารไม่ได้อีก และโต๊ะจะกลับเป็นว่าง"
+          confirmLabel="ปิดโต๊ะ"
+          pendingLabel="กำลังปิด..."
+          tone="brand"
+          isPending={closeSession.isPending}
+          error={closeSession.error}
+          onCancel={() => {
+            closeSession.reset()
+            setClosing(null)
+          }}
+          onConfirm={() =>
+            closeSession.mutate(closing.session.id, {
+              onSuccess: () => setClosing(null),
+            })
+          }
+        />
+      )}
 
       {receipt && (
         <ReceiptDialog payment={receipt} onClose={() => setReceipt(null)} />
@@ -278,14 +319,27 @@ export function CheckPage() {
         <PaymentDialog
           target={target}
           isSaving={createPayment.isPending}
-          onCancel={() => setTarget(null)}
-          onSubmit={(method, note, amount) =>
+          error={createPayment.error}
+          onCancel={() => {
+            createPayment.reset()
+            setTarget(null)
+          }}
+          canOverrideSlip={isAdmin}
+          onSubmit={({ method, note, amount, slip }) =>
             createPayment.mutate(
               {
                 tableSessionId: target.sessionId,
                 method,
                 tableName: target.tableName,
                 note,
+                // PromptPay: ส่งข้อความ QR ของสลิปให้ backend ตรวจกับ SlipOK
+                ...(method === PaymentMethod.PROMPTPAY
+                  ? slip.override
+                    ? { slipOverrideReason: slip.overrideReason.trim() }
+                    : { slipPayload: slip.payload.trim() }
+                  : {}),
+                // ยอดที่ลูกค้าเห็นบนจอ/QR — ถ้ายอดจริงเปลี่ยนไประหว่างนี้ backend จะไม่ยอมบันทึก
+                expectedTotal: target.amountDue,
                 // เท่ากับยอดบิลก็ไม่ต้องส่ง ปล่อยให้ backend คิดเองเหมือนเดิม
                 amount: amount === target.amountDue ? undefined : amount,
               },
@@ -308,13 +362,24 @@ const payMethods = [PaymentMethod.CASH, PaymentMethod.PROMPTPAY] as const
 function PaymentDialog({
   target,
   isSaving,
+  error,
+  canOverrideSlip,
   onCancel,
   onSubmit,
 }: {
   target: PayTarget
   isSaving: boolean
+  /** error ต้องโชว์ในกล่องนี้ — ErrorNote ของหน้าอยู่หลัง modal มองไม่เห็น */
+  error: unknown
+  /** ADMIN ยืนยันรับเงิน PromptPay เองได้เมื่อไม่มีสลิป */
+  canOverrideSlip: boolean
   onCancel: () => void
-  onSubmit: (method: PaymentMethod, note: string, amount: number) => void
+  onSubmit: (input: {
+    method: PaymentMethod
+    note: string
+    amount: number
+    slip: SlipInput
+  }) => void
 }) {
   /**
    * แยกสองยอดออกจากกัน เดิมมีช่องเดียวเลยทำได้แค่คิดเงินทอน แก้ยอดจริงไม่ได้
@@ -326,6 +391,7 @@ function PaymentDialog({
   const [note, setNote] = useState('')
   // โต๊ะที่ลูกค้าไม่ได้กดเช็คบิลจาก QR ต้องให้พนักงานเลือกวิธีจ่ายเอง
   const [method, setMethod] = useState<PaymentMethod>(target.method)
+  const [slip, setSlip] = useState<SlipInput>(emptySlipInput)
 
   const isPromptPay = method === PaymentMethod.PROMPTPAY
   const chargedNum = Number(charged)
@@ -335,6 +401,8 @@ function PaymentDialog({
     chargedNum >= 0 &&
     chargedNum <= target.amountDue
   const discount = target.amountDue - chargedNum
+  // PromptPay ต้องมีสลิปให้ตรวจ (หรือ ADMIN ยืนยันเอง) — backend ก็บังคับไว้อีกชั้น
+  const canSubmit = chargedValid && (!isPromptPay || isSlipReady(slip))
   const change = (Number(received) || 0) - chargedNum
 
   // QR ผูกยอดเงินไว้ด้วย ลูกค้าจึงไม่ต้องกรอกยอดเอง
@@ -346,11 +414,12 @@ function PaymentDialog({
 
   return (
     <Modal title={dialogTitle[method]} onClose={onCancel}>
+      <ErrorNote error={error} />
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          if (!chargedValid) return
-          onSubmit(method, note.trim(), chargedNum)
+          if (!canSubmit) return
+          onSubmit({ method, note: note.trim(), amount: chargedNum, slip })
         }}
       >
         <p className="mb-3 text-sm text-gray-500">
@@ -360,25 +429,29 @@ function PaymentDialog({
           </span>
         </p>
 
-        {/* ถ้าลูกค้าเลือกวิธีจ่ายมาแล้วก็ใช้ตามนั้น ไม่ต้องมีปุ่มให้กดเพิ่ม */}
-        {!target.chosenByCustomer && (
-          <div className="mb-4 grid grid-cols-2 gap-3">
-            {payMethods.map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMethod(m)}
-                className={`rounded-lg border-2 py-2.5 text-sm font-bold transition ${
-                  method === m
-                    ? `border-current ${methodColor[m]} bg-brand-50`
-                    : 'border-gray-300 text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                {methodLabel[m]}
-              </button>
-            ))}
-          </div>
+        {/* เลือกได้เสมอ — ลูกค้าอาจกดเช็คบิลเลือก PromptPay ไว้ แต่มาจ่ายเงินสดจริง
+            เดิมซ่อนปุ่มไว้เลยต้องบันทึกผิดวิธี ยอดแยกตามวิธีจ่ายในรายงานก็ผิดตาม */}
+        {target.chosenByCustomer && (
+          <p className="mb-2 text-xs text-gray-500">
+            ลูกค้าเลือก {methodLabel[target.method] ?? target.method} ไว้ — เปลี่ยนได้ถ้าจ่ายจริงต่างจากนี้
+          </p>
         )}
+        <div className="mb-4 grid grid-cols-2 gap-3">
+          {payMethods.map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMethod(m)}
+              className={`rounded-lg border-2 py-2.5 text-sm font-bold transition ${
+                method === m
+                  ? `border-current ${methodColor[m]} bg-brand-50`
+                  : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              {methodLabel[m]}
+            </button>
+          ))}
+        </div>
 
         {isPromptPay && (
           <div className="mb-4 flex flex-col items-center rounded-xl border-2 border-promptpay/30 bg-promptpay/5 p-4">
@@ -399,10 +472,11 @@ function PaymentDialog({
               </p>
             )}
 
-            <p className="mt-2 text-center text-xs text-gray-500">
-              ระบบยังตรวจสอบเงินเข้าอัตโนมัติไม่ได้ — ให้ตรวจสลิปก่อนกดบันทึก
-            </p>
           </div>
+        )}
+
+        {isPromptPay && (
+          <SlipScanField value={slip} onChange={setSlip} canOverride={canOverrideSlip} />
         )}
 
         <label className="block">
@@ -461,6 +535,12 @@ function PaymentDialog({
               placeholder="ไม่กรอกก็ได้"
               className="mt-1 w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 outline-none focus:border-brand-300 focus:bg-white"
             />
+            {/* ยังบันทึกได้ (ช่องนี้ไว้คิดเงินทอนเฉย ๆ) แต่ต้องเตือนให้เห็น จะได้ไม่ปล่อยลูกค้าไปทั้งที่เงินขาด */}
+            {Number(received) > 0 && change < 0 && (
+              <span className="mt-1 block text-right text-sm font-semibold text-danger">
+                รับเงินมาไม่พอ ขาดอีก {formatBaht(-change)}
+              </span>
+            )}
             {change > 0 && (
               <span className="mt-1 block text-right text-sm font-semibold text-brand-400">
                 เงินทอน {formatBaht(change)}
@@ -488,6 +568,7 @@ function PaymentDialog({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
+            maxLength={500}
             placeholder="พิมพ์ลงบนใบเสร็จ และเก็บไว้ในระบบ"
             className="mt-1 w-full resize-none rounded border border-gray-300 bg-gray-100 px-3 py-2 outline-none focus:border-brand-300 focus:bg-white"
           />
@@ -503,7 +584,7 @@ function PaymentDialog({
           </button>
           <button
             type="submit"
-            disabled={isSaving || !chargedValid}
+            disabled={isSaving || !canSubmit}
             className="rounded bg-plus py-2.5 font-bold text-white transition hover:brightness-95 disabled:opacity-60"
           >
             {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}

@@ -19,6 +19,7 @@ type ServerEvent =
   | 'service-request.updated'
   | 'payment.created'
   | 'payment.voided'
+  | 'payment.slip-updated'
   | 'table-session.created'
   | 'table-session.closed'
   | 'menu.updated'
@@ -31,9 +32,11 @@ const STAFF_INVALIDATIONS: Record<ServerEvent, readonly string[][]> = {
   // session summary มี checkoutRequest ติดมาด้วย
   'service-request.created': [['service-requests'], ['table-sessions']],
   'service-request.updated': [['service-requests'], ['table-sessions']],
-  // จ่าย/ยกเลิกบิลกระทบเกือบทุกอย่าง รวมถึงยอดขายบน Dashboard
-  'payment.created': [['payments'], ['orders'], ['service-requests'], ['table-sessions'], ['tables'], ['reports']],
-  'payment.voided': [['payments'], ['orders'], ['service-requests'], ['table-sessions'], ['tables'], ['reports']],
+  // จ่าย/ยกเลิกบิลกระทบเกือบทุกอย่าง รวมถึงยอดขายบน Dashboard และยอดลิ้นชักวันนี้
+  'payment.created': [['payments'], ['orders'], ['service-requests'], ['table-sessions'], ['tables'], ['reports'], ['cash-closes']],
+  'payment.voided': [['payments'], ['orders'], ['service-requests'], ['table-sessions'], ['tables'], ['reports'], ['cash-closes']],
+  // ระบบตรวจสลิปซ้ำเสร็จ / ADMIN ยืนยันเอง — ป้ายสถานะในรายการบิลกับตัวเลขบน Dashboard เปลี่ยน
+  'payment.slip-updated': [['payments'], ['reports']],
   'table-session.created': [['table-sessions'], ['tables']],
   'table-session.closed': [['table-sessions'], ['tables'], ['service-requests']],
   // ปิดวัตถุดิบเพราะของหมด → เมนู/ตัวเลือกเปลี่ยนทุกจอ

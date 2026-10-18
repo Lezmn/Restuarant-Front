@@ -67,7 +67,7 @@ export function TrendChart({ points }: { points: RevenuePoint[] }) {
             x={PAD.left - 8}
             y={y(tick) + 4}
             textAnchor="end"
-            className="fill-gray-400 text-[11px]"
+            className="fill-gray-400 text-xs"
           >
             {tick.toLocaleString('th-TH')}
           </text>
@@ -98,7 +98,7 @@ export function TrendChart({ points }: { points: RevenuePoint[] }) {
             x={x(i)}
             y={H - 8}
             textAnchor="middle"
-            className="fill-gray-500 text-[11px]"
+            className="fill-gray-500 text-xs"
           >
             {p.label}
           </text>

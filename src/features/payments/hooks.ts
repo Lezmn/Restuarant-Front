@@ -1,19 +1,41 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { LIVE_STALE_TIME } from '@/lib/live'
-import { createPayment, getPayment, getPayments, voidPayment } from './api'
+import {
+  confirmSlip,
+  createPayment,
+  getPayment,
+  getPayments,
+  getSlipIssuePayments,
+  recheckSlip,
+  voidPayment,
+} from './api'
 import type { Id } from '@/types/models'
 
 export const paymentKeys = {
   all: ['payments'] as const,
+  today: (dayStart: string) => ['payments', 'today', dayStart] as const,
+  slipIssues: ['payments', 'slip-issues'] as const,
   detail: (id: Id) => ['payments', id] as const,
 }
 
-export const usePayments = () =>
-  useQuery({
-    queryKey: paymentKeys.all,
-    queryFn: getPayments,
+/** ช่วง [เที่ยงคืนวันนี้, เที่ยงคืนพรุ่งนี้) ตามเวลาเครื่อง */
+function todayRange() {
+  const from = new Date()
+  from.setHours(0, 0, 0, 0)
+  const to = new Date(from)
+  to.setDate(to.getDate() + 1)
+  return { from, to }
+}
+
+/** บิลของวันนี้ — key ผูกกับวันที่ ข้ามเที่ยงคืนแล้วจะดึงชุดของวันใหม่เอง */
+export const useTodayPayments = () => {
+  const range = todayRange()
+  return useQuery({
+    queryKey: paymentKeys.today(range.from.toISOString()),
+    queryFn: () => getPayments(range),
     staleTime: LIVE_STALE_TIME,
   })
+}
 
 export const usePayment = (id: Id | undefined) =>
   useQuery({
@@ -40,3 +62,26 @@ function useBillingMutation<TVars, TData>(fn: (vars: TVars) => Promise<TData>) {
 
 export const useCreatePayment = () => useBillingMutation(createPayment)
 export const useVoidPayment = () => useBillingMutation(voidPayment)
+
+/** บิลที่สลิปรอตรวจ/ตรวจไม่ผ่าน ทุกวัน — โชว์ในหน้า Check ให้ตามจนกว่าจะจัดการ */
+export const useSlipIssuePayments = () =>
+  useQuery({
+    queryKey: paymentKeys.slipIssues,
+    queryFn: getSlipIssuePayments,
+    staleTime: LIVE_STALE_TIME,
+  })
+
+/** ตรวจซ้ำ / ยืนยันเอง — กระทบรายการบิลและตัวเลขแจ้งเตือนบน Dashboard */
+function useSlipMutation<TVars, TData>(fn: (vars: TVars) => Promise<TData>) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: paymentKeys.all })
+      qc.invalidateQueries({ queryKey: ['reports'] })
+    },
+  })
+}
+
+export const useRecheckSlip = () => useSlipMutation(recheckSlip)
+export const useConfirmSlip = () => useSlipMutation(confirmSlip)

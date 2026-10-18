@@ -1,3 +1,4 @@
+import { MAX_ITEM_QUANTITY } from '@/lib/config'
 import type { Id } from '@/types/models'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -73,7 +74,8 @@ export const useCart = create<CartState>()(
             return {
               lines: state.lines.map((l) =>
                 l.lineId === lineId
-                  ? { ...l, quantity: l.quantity + line.quantity }
+                  ? // เพิ่มเมนูเดิมซ้ำหลายรอบ อย่าให้รวมเกินเพดานของ backend
+                    { ...l, quantity: Math.min(l.quantity + line.quantity, MAX_ITEM_QUANTITY) }
                   : l,
               ),
             }

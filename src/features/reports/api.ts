@@ -30,12 +30,14 @@ export const currentMonth = () => {
  * ตัดช่วง "วันนี้" ด้วย report.date ของ backend ไม่ใช่เวลาเครื่องผู้ใช้ ตัวเลขจะได้ตรงกัน
  */
 export async function getDashboard(): Promise<DashboardData> {
-  const [report, payments] = await Promise.all([
-    apiClient<ApiDashboardReport>('/reports/dashboard'),
-    getPayments(),
-  ])
-
+  const report = await apiClient<ApiDashboardReport>('/reports/dashboard')
   const dayStart = new Date(report.date).getTime()
+  // ดึงเฉพาะบิลของวันเดียวกับรายงาน ไม่ใช่ทั้งประวัติร้าน
+  const payments = await getPayments({
+    from: new Date(dayStart),
+    to: new Date(dayStart + DAY_MS),
+  })
+
   const todayPayments = payments.filter((p) => {
     const paidAt = new Date(p.paidAt).getTime()
     return (
@@ -84,6 +86,7 @@ export async function getDashboard(): Promise<DashboardData> {
       tablesTotal: report.tables.total,
     },
     notifications,
+    slipIssues: report.slipIssues ?? { pending: 0, failed: 0 },
   }
 }
 
@@ -111,6 +114,8 @@ export async function getFinance(month: string): Promise<FinanceData> {
       category: t.category,
       // ตารางรวมรายรับ-รายจ่ายไว้ด้วยกัน จึงเก็บรายจ่ายเป็นค่าลบ
       amount: t.type === 'EXPENSE' ? -t.amount : t.amount,
+      paidFromDrawer: t.paidFromDrawer,
+      createdByName: t.createdByName,
     })),
   }
 }
