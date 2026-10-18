@@ -200,5 +200,15 @@ export const mapPayment = (p: ApiPayment, fallbackTableName?: string): Payment =
     voidReason: p.voidReason ?? null,
     note: p.note ?? null,
     receipt: p.receipt ? mapReceipt(p.receipt, table) : null,
+    slip: p.slipStatus
+      ? {
+          status: p.slipStatus,
+          transRef: p.slipTransRef ?? null,
+          message: p.slipMessage ?? null,
+          attempts: p.slipAttempts ?? 0,
+          overrideReason: p.slipOverrideReason ?? null,
+          overrideByName: p.slipOverrideByName ?? null,
+        }
+      : null,
   }
 }

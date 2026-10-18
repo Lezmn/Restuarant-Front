@@ -45,6 +45,15 @@ export const PaymentStatus = {
 } as const
 export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus]
 
+/** ผลตรวจสลิป PromptPay ผ่าน SlipOK (prisma enum SlipStatus) — เงินสดเป็น null */
+export const SlipStatus = {
+  VERIFIED: 'VERIFIED',
+  PENDING: 'PENDING',
+  FAILED: 'FAILED',
+  MANUAL: 'MANUAL',
+} as const
+export type SlipStatus = (typeof SlipStatus)[keyof typeof SlipStatus]
+
 /** หมวดรายจ่ายของร้าน (prisma enum ExpenseCategory) */
 export const ExpenseCategory = {
   INGREDIENTS: 'INGREDIENTS',

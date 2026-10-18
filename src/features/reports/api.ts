@@ -86,6 +86,7 @@ export async function getDashboard(): Promise<DashboardData> {
       tablesTotal: report.tables.total,
     },
     notifications,
+    slipIssues: report.slipIssues ?? { pending: 0, failed: 0 },
   }
 }
 

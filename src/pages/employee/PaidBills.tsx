@@ -11,6 +11,7 @@ import { usePagination } from '@/lib/use-pagination'
 import { PaymentMethod, PaymentStatus } from '@/types/enums'
 import type { Id, Payment } from '@/types/models'
 import { ReceiptDialog } from './ReceiptDialog'
+import { SlipBadge } from './SlipBadge'
 import { useState } from 'react'
 
 const methodLabel: Record<string, string> = {
@@ -115,6 +116,12 @@ export function PaidBills() {
                     }`}
                   >
                     {methodLabel[p.method]}
+                    {/* PromptPay: ผลตรวจสลิป (บิลเก่าก่อนมีระบบตรวจไม่มีป้าย) */}
+                    {p.slip && !voided && (
+                      <span className="mt-1 block">
+                        <SlipBadge slip={p.slip} />
+                      </span>
+                    )}
                   </td>
                   <td
                     className={`px-4 py-3 font-bold tabular-nums ${

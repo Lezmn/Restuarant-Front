@@ -21,6 +21,10 @@ export async function createPayment(vars: {
   tableName: string
   /** หมายเหตุตอนรับเงิน — backend เก็บลง payment + receipt */
   note?: string
+  /** PromptPay: ข้อความใน QR ของสลิป — backend ส่งไปตรวจกับ SlipOK */
+  slipPayload?: string
+  /** PromptPay ไม่มีสลิป — เฉพาะ ADMIN ยืนยันเองพร้อมเหตุผล */
+  slipOverrideReason?: string
 }): Promise<Payment> {
   const data = await apiClient<ApiPayment>('/payments', {
     method: 'POST',
@@ -30,6 +34,8 @@ export async function createPayment(vars: {
       expectedTotal: vars.expectedTotal,
       ...(vars.amount === undefined ? {} : { amount: vars.amount }),
       ...(vars.note ? { note: vars.note } : {}),
+      ...(vars.slipPayload ? { slipPayload: vars.slipPayload } : {}),
+      ...(vars.slipOverrideReason ? { slipOverrideReason: vars.slipOverrideReason } : {}),
     }),
   })
   return mapPayment(data, vars.tableName)
@@ -67,6 +73,29 @@ export async function voidPayment(vars: {
   const reason = vars.reason.trim()
   if (!reason) throw new Error('ต้องระบุเหตุผลที่ยกเลิกบิล')
   const data = await apiClient<ApiPayment>(`/payments/${vars.id}/void`, {
+    method: 'PATCH',
+    body: JSON.stringify({ reason }),
+  })
+  return mapPayment(data)
+}
+
+/** GET /payments?slipIssues=true — บิล PromptPay ที่สลิปรอตรวจ/ตรวจไม่ผ่าน (ทุกวัน) */
+export async function getSlipIssuePayments(): Promise<Payment[]> {
+  const data = await apiClient<ApiPayment[]>('/payments?slipIssues=true')
+  return data.map((p) => mapPayment(p))
+}
+
+/** POST /payments/:id/slip/recheck @Roles(ADMIN, STAFF) — ตรวจสลิปที่รอตรวจอีกครั้งทันที */
+export async function recheckSlip(id: Id): Promise<Payment> {
+  const data = await apiClient<ApiPayment>(`/payments/${id}/slip/recheck`, { method: 'POST' })
+  return mapPayment(data)
+}
+
+/** PATCH /payments/:id/slip/confirm @Roles(ADMIN) — ยืนยันรับเงินเอง (ต้องมีเหตุผล) */
+export async function confirmSlip(vars: { id: Id; reason: string }): Promise<Payment> {
+  const reason = vars.reason.trim()
+  if (!reason) throw new Error('ต้องระบุเหตุผลที่ยืนยันเอง')
+  const data = await apiClient<ApiPayment>(`/payments/${vars.id}/slip/confirm`, {
     method: 'PATCH',
     body: JSON.stringify({ reason }),
   })

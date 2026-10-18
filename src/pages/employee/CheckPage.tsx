@@ -2,6 +2,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorNote } from '@/components/ui/ErrorNote'
 import { Modal } from '@/components/ui/Modal'
 import { useOrders } from '@/features/orders/hooks'
+import { useAuth } from '@/features/auth/use-auth'
 import { useCreatePayment } from '@/features/payments/hooks'
 import { useServiceRequests } from '@/features/service-requests/hooks'
 import { useCloseSession, useSessions } from '@/features/table-sessions/hooks'
@@ -12,6 +13,7 @@ import { buildPromptPayPayload } from '@/lib/promptpay'
 import {
   OrderStatus,
   PaymentMethod,
+  Role,
   ServiceRequestStatus,
   ServiceRequestType,
   TableSessionStatus,
@@ -20,6 +22,13 @@ import type { Id, Payment, TableSession } from '@/types/models'
 import { CashDrawerBar } from './CashDrawerBar'
 import { PaidBills } from './PaidBills'
 import { ReceiptDialog } from './ReceiptDialog'
+import { SlipIssues } from './SlipIssues'
+import {
+  emptySlipInput,
+  isSlipReady,
+  SlipScanField,
+  type SlipInput,
+} from './SlipScanField'
 import { QRCodeSVG } from 'qrcode.react'
 import { useMemo, useState } from 'react'
 
@@ -63,6 +72,7 @@ export function CheckPage() {
   })
   const { data: orders } = useOrders({ refetchInterval: POLL_MS })
   const createPayment = useCreatePayment()
+  const isAdmin = useAuth((s) => s.user?.role === Role.ADMIN)
   const closeSession = useCloseSession()
   const [target, setTarget] = useState<PayTarget | null>(null)
   /** ใบเสร็จที่เพิ่งออก — เปิดให้พิมพ์ทันทีหลังรับเงิน */
@@ -269,6 +279,9 @@ export function CheckPage() {
         </table>
       </div>
 
+      {/* บิล PromptPay ที่ยังยืนยันเงินเข้าไม่ได้ (ทุกวัน) — ซ่อนเองถ้าไม่มี */}
+      <SlipIssues />
+
       <PaidBills />
 
       {closing && (
@@ -311,13 +324,20 @@ export function CheckPage() {
             createPayment.reset()
             setTarget(null)
           }}
-          onSubmit={(method, note, amount) =>
+          canOverrideSlip={isAdmin}
+          onSubmit={({ method, note, amount, slip }) =>
             createPayment.mutate(
               {
                 tableSessionId: target.sessionId,
                 method,
                 tableName: target.tableName,
                 note,
+                // PromptPay: ส่งข้อความ QR ของสลิปให้ backend ตรวจกับ SlipOK
+                ...(method === PaymentMethod.PROMPTPAY
+                  ? slip.override
+                    ? { slipOverrideReason: slip.overrideReason.trim() }
+                    : { slipPayload: slip.payload.trim() }
+                  : {}),
                 // ยอดที่ลูกค้าเห็นบนจอ/QR — ถ้ายอดจริงเปลี่ยนไประหว่างนี้ backend จะไม่ยอมบันทึก
                 expectedTotal: target.amountDue,
                 // เท่ากับยอดบิลก็ไม่ต้องส่ง ปล่อยให้ backend คิดเองเหมือนเดิม
@@ -343,6 +363,7 @@ function PaymentDialog({
   target,
   isSaving,
   error,
+  canOverrideSlip,
   onCancel,
   onSubmit,
 }: {
@@ -350,8 +371,15 @@ function PaymentDialog({
   isSaving: boolean
   /** error ต้องโชว์ในกล่องนี้ — ErrorNote ของหน้าอยู่หลัง modal มองไม่เห็น */
   error: unknown
+  /** ADMIN ยืนยันรับเงิน PromptPay เองได้เมื่อไม่มีสลิป */
+  canOverrideSlip: boolean
   onCancel: () => void
-  onSubmit: (method: PaymentMethod, note: string, amount: number) => void
+  onSubmit: (input: {
+    method: PaymentMethod
+    note: string
+    amount: number
+    slip: SlipInput
+  }) => void
 }) {
   /**
    * แยกสองยอดออกจากกัน เดิมมีช่องเดียวเลยทำได้แค่คิดเงินทอน แก้ยอดจริงไม่ได้
@@ -363,6 +391,7 @@ function PaymentDialog({
   const [note, setNote] = useState('')
   // โต๊ะที่ลูกค้าไม่ได้กดเช็คบิลจาก QR ต้องให้พนักงานเลือกวิธีจ่ายเอง
   const [method, setMethod] = useState<PaymentMethod>(target.method)
+  const [slip, setSlip] = useState<SlipInput>(emptySlipInput)
 
   const isPromptPay = method === PaymentMethod.PROMPTPAY
   const chargedNum = Number(charged)
@@ -372,6 +401,8 @@ function PaymentDialog({
     chargedNum >= 0 &&
     chargedNum <= target.amountDue
   const discount = target.amountDue - chargedNum
+  // PromptPay ต้องมีสลิปให้ตรวจ (หรือ ADMIN ยืนยันเอง) — backend ก็บังคับไว้อีกชั้น
+  const canSubmit = chargedValid && (!isPromptPay || isSlipReady(slip))
   const change = (Number(received) || 0) - chargedNum
 
   // QR ผูกยอดเงินไว้ด้วย ลูกค้าจึงไม่ต้องกรอกยอดเอง
@@ -387,8 +418,8 @@ function PaymentDialog({
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          if (!chargedValid) return
-          onSubmit(method, note.trim(), chargedNum)
+          if (!canSubmit) return
+          onSubmit({ method, note: note.trim(), amount: chargedNum, slip })
         }}
       >
         <p className="mb-3 text-sm text-gray-500">
@@ -441,10 +472,11 @@ function PaymentDialog({
               </p>
             )}
 
-            <p className="mt-2 text-center text-xs text-gray-500">
-              ระบบยังตรวจสอบเงินเข้าอัตโนมัติไม่ได้ — ให้ตรวจสลิปก่อนกดบันทึก
-            </p>
           </div>
+        )}
+
+        {isPromptPay && (
+          <SlipScanField value={slip} onChange={setSlip} canOverride={canOverrideSlip} />
         )}
 
         <label className="block">
@@ -552,7 +584,7 @@ function PaymentDialog({
           </button>
           <button
             type="submit"
-            disabled={isSaving || !chargedValid}
+            disabled={isSaving || !canSubmit}
             className="rounded bg-plus py-2.5 font-bold text-white transition hover:brightness-95 disabled:opacity-60"
           >
             {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}

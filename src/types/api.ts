@@ -15,6 +15,7 @@ import type {
   Role,
   ServiceRequestStatus,
   ServiceRequestType,
+  SlipStatus,
   TableSessionStatus,
   TableStatus,
 } from './enums'
@@ -171,6 +172,13 @@ export interface ApiPayment {
   tableSessionId: string
   receipt?: ApiReceipt | null
   tableSession?: ApiTableSession
+  // ---- ตรวจสลิป PromptPay (SlipOK) ----
+  slipStatus?: SlipStatus | null
+  slipTransRef?: string | null
+  slipMessage?: string | null
+  slipAttempts?: number
+  slipOverrideReason?: string | null
+  slipOverrideByName?: string | null
 }
 
 /** GET /reports/dashboard @Roles(ADMIN) — สรุปของ "วันนี้" ตามเวลาของ server + เทรนด์ 7 วัน */
@@ -186,6 +194,8 @@ export interface ApiDashboardReport {
   tables: Record<TableStatus, number> & { total: number }
   /** date เป็น YYYY-MM-DD ครบทุกวัน (วันที่ไม่มียอดเป็น 0) */
   revenueTrend: { date: string; revenue: number }[]
+  /** บิล PromptPay ที่ยังยืนยันเงินเข้าไม่ได้ (ทุกวัน) */
+  slipIssues?: { pending: number; failed: number }
 }
 
 /** GET /reports/income-expense?month=YYYY-MM @Roles(ADMIN) */

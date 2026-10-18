@@ -1,11 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { LIVE_STALE_TIME } from '@/lib/live'
-import { createPayment, getPayment, getPayments, voidPayment } from './api'
+import {
+  confirmSlip,
+  createPayment,
+  getPayment,
+  getPayments,
+  getSlipIssuePayments,
+  recheckSlip,
+  voidPayment,
+} from './api'
 import type { Id } from '@/types/models'
 
 export const paymentKeys = {
   all: ['payments'] as const,
   today: (dayStart: string) => ['payments', 'today', dayStart] as const,
+  slipIssues: ['payments', 'slip-issues'] as const,
   detail: (id: Id) => ['payments', id] as const,
 }
 
@@ -53,3 +62,26 @@ function useBillingMutation<TVars, TData>(fn: (vars: TVars) => Promise<TData>) {
 
 export const useCreatePayment = () => useBillingMutation(createPayment)
 export const useVoidPayment = () => useBillingMutation(voidPayment)
+
+/** บิลที่สลิปรอตรวจ/ตรวจไม่ผ่าน ทุกวัน — โชว์ในหน้า Check ให้ตามจนกว่าจะจัดการ */
+export const useSlipIssuePayments = () =>
+  useQuery({
+    queryKey: paymentKeys.slipIssues,
+    queryFn: getSlipIssuePayments,
+    staleTime: LIVE_STALE_TIME,
+  })
+
+/** ตรวจซ้ำ / ยืนยันเอง — กระทบรายการบิลและตัวเลขแจ้งเตือนบน Dashboard */
+function useSlipMutation<TVars, TData>(fn: (vars: TVars) => Promise<TData>) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: paymentKeys.all })
+      qc.invalidateQueries({ queryKey: ['reports'] })
+    },
+  })
+}
+
+export const useRecheckSlip = () => useSlipMutation(recheckSlip)
+export const useConfirmSlip = () => useSlipMutation(confirmSlip)

@@ -6,6 +6,7 @@ import type {
   Role,
   ServiceRequestStatus,
   ServiceRequestType,
+  SlipStatus,
   TableSessionStatus,
   TableStatus,
 } from './enums'
@@ -150,6 +151,19 @@ export interface Payment {
   voidReason: string | null
   note: string | null
   receipt: Receipt | null
+  /** ผลตรวจสลิป PromptPay — null = เงินสด หรือบิลก่อนมีระบบตรวจสลิป */
+  slip: PaymentSlip | null
+}
+
+export interface PaymentSlip {
+  status: SlipStatus
+  transRef: string | null
+  /** ผล/เหตุผลล่าสุด เช่น "ข้อมูลธนาคารขัดข้องชั่วคราว" */
+  message: string | null
+  attempts: number
+  /** ADMIN ยืนยันเอง — เหตุผลกับชื่อคนยืนยัน */
+  overrideReason: string | null
+  overrideByName: string | null
 }
 
 export interface ServiceRequest {

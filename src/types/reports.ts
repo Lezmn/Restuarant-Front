@@ -41,6 +41,8 @@ export interface DashboardData {
   trend: RevenuePoint[]
   todayStatus: TodayStatus
   notifications: Notification[]
+  /** บิล PromptPay ที่ยังยืนยันเงินเข้าไม่ได้ (ทุกวัน) */
+  slipIssues: { pending: number; failed: number }
 }
 
 export interface Transaction {
