@@ -1,0 +1,17 @@
+import { test, expect } from '@playwright/test'
+
+// ไม่ต้องพึ่ง backend — ProtectedRoute เช็คจาก localStorage อย่างเดียว ไม่เรียก API
+
+test('เข้าหน้าพนักงานโดยยังไม่ login ต้องเด้งไปหน้า login', async ({ page }) => {
+  await page.goto('/employee/order')
+
+  await expect(page).toHaveURL(/\/employee\/login$/)
+})
+
+test('เข้าหน้าเจ้าของร้านโดยยังไม่ login ต้องเด้งไป login ของเจ้าของร้าน', async ({
+  page,
+}) => {
+  await page.goto('/owner/dashboard')
+
+  await expect(page).toHaveURL(/\/owner\/login$/)
+})
